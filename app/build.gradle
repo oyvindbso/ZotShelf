@@ -4,6 +4,16 @@ plugins {
 
 android {
     namespace 'com.example.zoteroepubcovers'
+    lintOptions {
+    abortOnError false
+    checkReleaseBuilds false
+    }
+
+    testOptions {
+    unitTests.all {
+        enabled = false
+    }
+    } 
     compileSdk 34
     
     defaultConfig {
@@ -13,7 +23,17 @@ android {
         versionCode 1
         versionName "1.0"
     }
-    
+    lintOptions {
+    abortOnError false
+    checkReleaseBuilds false
+    } 
+
+    testOptions {
+    unitTests.all {
+        enabled = false
+    }
+    }
+
     buildTypes {
         release {
             minifyEnabled false

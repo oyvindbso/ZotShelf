@@ -9,14 +9,6 @@ buildscript {
     }
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://jitpack.io' }  // For epublib dependency
-    }
-}
-
 tasks.register('clean', Delete) {
     delete rootProject.buildDir
 }
