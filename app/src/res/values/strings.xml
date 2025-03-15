@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Zotero EPUB Covers</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="no_epubs_found">No EPUB files found in your Zotero library</string>
+    <string name="error_loading">Error loading EPUBs</string>
+    <string name="settings_saved">Settings saved</string>
+    <string name="enter_credentials">Please enter your Zotero credentials</string>
+</resources>
