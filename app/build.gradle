@@ -62,7 +62,6 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.15.1'
     
     // Epublib for EPUB parsing
-    implementation 'com.github.futuresimple:android-autoprovider:0.6.0'
     implementation 'com.github.mertakdut:EpubParser:1.0.95' 
     implementation 'org.slf4j:slf4j-android:1.7.36'    
     
