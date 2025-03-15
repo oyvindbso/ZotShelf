@@ -62,8 +62,9 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.15.1'
     
     // Epublib for EPUB parsing
-    implementation 'nl.siegmann.epublib:epublib-core:3.1'
-    implementation 'org.slf4j:slf4j-android:1.7.36'
+    implementation 'com.github.futuresimple:android-autoprovider:0.6.0'
+    implementation 'com.github.mertakdut:EpubParser:1.0.95' 
+    implementation 'org.slf4j:slf4j-android:1.7.36'    
     
     // Room for caching
     implementation 'androidx.room:room-runtime:2.5.2'
