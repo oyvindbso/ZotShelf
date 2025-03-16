@@ -9,8 +9,10 @@ import java.io.InputStream;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import nl.siegmann.epublib.domain.Book;
-import nl.siegmann.epublib.epub.EpubReader;
+// Import the new library
+import com.mertakdut.Reader;
+import com.mertakdut.exception.OutOfPagesException;
+import com.mertakdut.exception.ReadingException;
 
 public class EpubCoverExtractor {
 
@@ -43,30 +45,24 @@ public class EpubCoverExtractor {
                     return;
                 }
                 
-                // Read the EPUB file
-                EpubReader epubReader = new EpubReader();
-                Book book = epubReader.readEpub(new java.io.FileInputStream(epubFilePath));
+                // Using the new library to extract cover
+                Reader reader = new Reader();
+                reader.setIsIncludingTextContent(false);  // No need for text content
+                reader.setFullContent(epubFilePath); 
                 
-                // Extract the cover image
-                if (book.getCoverImage() != null) {
-                    InputStream coverData = book.getCoverImage().getInputStream();
+                // The cover image is typically at the beginning of the EPUB
+                byte[] coverData = reader.getCoverImage();
+                
+                if (coverData != null && coverData.length > 0) {
                     FileOutputStream output = new FileOutputStream(coverFile);
-                    
-                    byte[] buffer = new byte[1024];
-                    int bytesRead;
-                    
-                    while ((bytesRead = coverData.read(buffer)) != -1) {
-                        output.write(buffer, 0, bytesRead);
-                    }
-                    
+                    output.write(coverData);
                     output.close();
-                    coverData.close();
                     
                     callback.onCoverExtracted(coverFile.getAbsolutePath());
                 } else {
                     callback.onError("No cover image found in EPUB");
                 }
-            } catch (IOException e) {
+            } catch (IOException | ReadingException e) {
                 Log.e(TAG, "Error extracting cover", e);
                 callback.onError("Failed to extract cover: " + e.getMessage());
             }
