@@ -9,10 +9,9 @@ import java.io.InputStream;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-// Import the new library
-import com.mertakdut.Reader;
-import com.mertakdut.exception.OutOfPagesException;
-import com.mertakdut.exception.ReadingException;
+import com.github.mertakdut.Reader;
+import com.github.mertakdut.exception.OutOfPagesException;
+import com.github.mertakdut.exception.ReadingException;
 
 public class EpubCoverExtractor {
 
@@ -45,24 +44,33 @@ public class EpubCoverExtractor {
                     return;
                 }
                 
-                // Using the new library to extract cover
+                // Use the Mertakdut EpubParser library to get the cover
                 Reader reader = new Reader();
-                reader.setIsIncludingTextContent(false);  // No need for text content
-                reader.setFullContent(epubFilePath); 
-                
-                // The cover image is typically at the beginning of the EPUB
-                byte[] coverData = reader.getCoverImage();
-                
-                if (coverData != null && coverData.length > 0) {
-                    FileOutputStream output = new FileOutputStream(coverFile);
-                    output.write(coverData);
-                    output.close();
+                reader.setMaxContentPerSection(1000); // Set max content per section to 1000 chars
+                reader.setIsIncludingTextContent(false); // Don't need the text, just the images
+                reader.setFullContent(epubFilePath); // Load the EPUB
+
+                // Attempt to extract the cover image
+                try {
+                    // Get cover image bytes - try to get from metadata
+                    byte[] coverData = reader.getCoverImage();
                     
-                    callback.onCoverExtracted(coverFile.getAbsolutePath());
-                } else {
-                    callback.onError("No cover image found in EPUB");
+                    if (coverData != null && coverData.length > 0) {
+                        FileOutputStream output = new FileOutputStream(coverFile);
+                        output.write(coverData);
+                        output.close();
+                        
+                        callback.onCoverExtracted(coverFile.getAbsolutePath());
+                    } else {
+                        // If no cover in metadata, try to get the first image from the content
+                        callback.onError("No cover image found in EPUB metadata, would need to parse content");
+                    }
+                } catch (ReadingException | OutOfPagesException e) {
+                    Log.e(TAG, "Error extracting cover", e);
+                    callback.onError("Failed to extract cover: " + e.getMessage());
                 }
-            } catch (IOException | ReadingException e) {
+                
+            } catch (Exception e) {
                 Log.e(TAG, "Error extracting cover", e);
                 callback.onError("Failed to extract cover: " + e.getMessage());
             }
