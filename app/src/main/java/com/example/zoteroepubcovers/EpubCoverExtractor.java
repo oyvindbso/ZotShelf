@@ -5,12 +5,10 @@ import android.util.Log;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import com.github.mertakdut.Reader;
-import com.github.mertakdut.exception.OutOfPagesException;
 import com.github.mertakdut.exception.ReadingException;
 
 public class EpubCoverExtractor {
@@ -63,9 +61,10 @@ public class EpubCoverExtractor {
                         callback.onCoverExtracted(coverFile.getAbsolutePath());
                     } else {
                         // If no cover in metadata, try to get the first image from the content
-                        callback.onError("No cover image found in EPUB metadata, would need to parse content");
+                        callback.onError("No cover image found in EPUB metadata");
                     }
-                } catch (ReadingException | OutOfPagesException e) {
+                } catch (ReadingException e) {
+                    // Only catch ReadingException here, not OutOfPagesException
                     Log.e(TAG, "Error extracting cover", e);
                     callback.onError("Failed to extract cover: " + e.getMessage());
                 }
