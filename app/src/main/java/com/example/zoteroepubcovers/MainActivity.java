@@ -215,18 +215,35 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         getMenuInflater().inflate(R.menu.main_menu, menu);
         return true;
     }
-
+    
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.action_settings) {
-            startActivity(new Intent(this, SettingsActivity.class));
-            return true;
-        } else if (item.getItemId() == R.id.action_refresh) {
-            loadEpubs();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
+    if (item.getItemId() == R.id.action_settings) {
+        startActivity(new Intent(this, SettingsActivity.class));
+        return true;
+    } else if (item.getItemId() == R.id.action_refresh) {
+        loadEpubs();
+        return true;
+    } else if (item.getItemId() == R.id.action_info) {
+        showInfoDialog();
+        return true;
     }
+    return super.onOptionsItemSelected(item);
+    }
+    private void showInfoDialog() {
+    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    builder.setTitle("About Zotero EPUB Covers");
+    
+    // Use a custom layout with scrolling for the dialog
+    LayoutInflater inflater = getLayoutInflater();
+    View dialogView = inflater.inflate(R.layout.dialog_info, null);
+    builder.setView(dialogView);
+    
+    builder.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
+    
+    AlertDialog dialog = builder.create();
+    dialog.show();
+}
 
     @Override
     protected void onResume() {
@@ -249,33 +266,5 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         startActivity(intent);
     }
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    if (item.getItemId() == R.id.action_settings) {
-        startActivity(new Intent(this, SettingsActivity.class));
-        return true;
-    } else if (item.getItemId() == R.id.action_refresh) {
-        loadEpubs();
-        return true;
-    } else if (item.getItemId() == R.id.action_info) {
-        showInfoDialog();
-        return true;
-    }
-    return super.onOptionsItemSelected(item);
-    }
-  
-    private void showInfoDialog() {
-    AlertDialog.Builder builder = new AlertDialog.Builder(this);
-    builder.setTitle("About Zotero EPUB Covers");
     
-    // Use a custom layout with scrolling for the dialog
-    LayoutInflater inflater = getLayoutInflater();
-    View dialogView = inflater.inflate(R.layout.dialog_info, null);
-    builder.setView(dialogView);
-    
-    builder.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
-    
-    AlertDialog dialog = builder.create();
-    dialog.show();
-}
 }
