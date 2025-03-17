@@ -13,5 +13,11 @@
         android:icon="@drawable/ic_settings"
         android:title="Settings"
         app:showAsAction="ifRoom" />
+ <!--information button -->
+    <item
+        android:id="@+id/action_info"
+        android:icon="@drawable/ic_info"
+        android:title="Information"
+        app:showAsAction="ifRoom" />
 
 </menu>
