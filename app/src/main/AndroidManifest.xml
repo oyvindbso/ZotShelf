@@ -27,5 +27,19 @@
             android:name=".SettingsActivity"
             android:label="@string/title_activity_settings"
             android:parentActivityName=".MainActivity" />
+        <!-- Widget Provider -->
+        <receiver android:name=".EpubCoversWidgetProvider" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/epub_covers_widget_info" />
+        </receiver>
+        
+        <!-- Widget Remote Views Service -->
+        <service android:name=".EpubCoversWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
     </application>
 </manifest>

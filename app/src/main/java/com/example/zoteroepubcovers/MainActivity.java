@@ -159,7 +159,36 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
                         }
                     });
                 }
-
+                @Override
+                protected void onCreate(Bundle savedInstanceState) {
+                    super.onCreate(savedInstanceState);
+                    // Existing code...
+                    
+                    // Handle widget click intent
+                    if (getIntent().hasExtra("fromWidget")) {
+                        handleWidgetClick(getIntent());
+                    }
+                }
+                
+                @Override
+                protected void onNewIntent(Intent intent) {
+                    super.onNewIntent(intent);
+                    if (intent.hasExtra("fromWidget")) {
+                        handleWidgetClick(intent);
+                    }
+                }
+                
+                private void handleWidgetClick(Intent intent) {
+                    if (intent.hasExtra("itemId") && intent.hasExtra("username")) {
+                        String itemId = intent.getStringExtra("itemId");
+                        String username = intent.getStringExtra("username");
+                        
+                        // Open the Zotero web library
+                        String url = "https://www.zotero.org/" + username + "/items/" + itemId;
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        startActivity(browserIntent);
+                    }
+                }
                 @Override
                 public void onError(ZoteroItem item, String errorMessage) {
                     // If download fails, still add the item but with error info and placeholder
