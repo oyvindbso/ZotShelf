@@ -220,38 +220,39 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
     }
     
     @Override
-    @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.action_settings) {
-            startActivity(new Intent(this, SettingsActivity.class));
-            return true;
-        } else if (item.getItemId() == R.id.action_refresh) {
-            loadEpubs();
-            return true;
-        } else if (item.getItemId() == R.id.action_info) {
-            showInfoDialog();
-            return true;
-        } else if (item.getItemId() == R.id.action_select_collection) {
-            showCollectionSelector();
-            return true;
+        switch (item.getItemId()) {
+            case R.id.action_settings:
+                startActivity(new Intent(this, SettingsActivity.class));
+                return true;
+            case R.id.action_refresh:
+                loadEpubs();
+                return true;
+            case R.id.action_info:
+                showInfoDialog();
+                return true;
+            case R.id.action_select_collection:
+                showCollectionSelector();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
-        return super.onOptionsItemSelected(item);
     }
-    }
+
     private void showInfoDialog() {
-    AlertDialog.Builder builder = new AlertDialog.Builder(this);
-    builder.setTitle("About Zotero EPUB Covers");
-    
-    // Use a custom layout with scrolling for the dialog
-    LayoutInflater inflater = getLayoutInflater();
-    View dialogView = inflater.inflate(R.layout.dialog_info, null);
-    builder.setView(dialogView);
-    
-    builder.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
-    
-    AlertDialog dialog = builder.create();
-    dialog.show();
-}
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("About Zotero EPUB Covers");
+        
+        // Use a custom layout with scrolling for the dialog
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_info, null);
+        builder.setView(dialogView);
+        
+        builder.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
 
     @Override
     protected void onResume() {
@@ -276,7 +277,7 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         }
         
         // Find the currently selected index
-        String currentCollectionKey = userPreferences.getSelectedCollectionKey();
+                String currentCollectionKey = userPreferences.getSelectedCollectionKey();
         int selectedIndex = 0;
         for (int i = 0; i < collectionKeys.size(); i++) {
             if (collectionKeys.get(i).equals(currentCollectionKey)) {
@@ -307,6 +308,7 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
     private void updateTitle() {
         getSupportActionBar().setSubtitle(userPreferences.getSelectedCollectionName());
     }
+
     @Override
     public void onCoverClick(EpubCoverItem item) {
         // Open the Zotero web library when a cover is clicked
@@ -319,33 +321,34 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         startActivity(intent);
     }
+
     private void showCollectionSelector() {
-    if (!userPreferences.hasZoteroCredentials()) {
-        Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
-        return;
-    }
-    
-    progressBar.setVisibility(View.VISIBLE);
-    
-    String userId = userPreferences.getZoteroUserId();
-    String apiKey = userPreferences.getZoteroApiKey();
-    
-    zoteroApiClient.getCollections(userId, apiKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroCollection>>() {
-        @Override
-        public void onSuccess(List<ZoteroCollection> collections) {
-            runOnUiThread(() -> {
-                progressBar.setVisibility(View.GONE);
-                showCollectionDialog(collections);
-            });
+        if (!userPreferences.hasZoteroCredentials()) {
+            Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
+            return;
         }
         
-        @Override
-        public void onError(String errorMessage) {
-            runOnUiThread(() -> {
-                progressBar.setVisibility(View.GONE);
-                Toast.makeText(MainActivity.this, "Error loading collections: " + errorMessage, Toast.LENGTH_LONG).show();
-            });
-        }
-    });
-}
+        progressBar.setVisibility(View.VISIBLE);
+        
+        String userId = userPreferences.getZoteroUserId();
+        String apiKey = userPreferences.getZoteroApiKey();
+        
+        zoteroApiClient.getCollections(userId, apiKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroCollection>>() {
+            @Override
+            public void onSuccess(List<ZoteroCollection> collections) {
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    showCollectionDialog(collections);
+                });
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(MainActivity.this, "Error loading collections: " + errorMessage, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
 }
