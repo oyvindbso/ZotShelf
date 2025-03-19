@@ -47,9 +47,12 @@ public class UserPreferences {
     }
     
     public void setZoteroUsername(String username) {
-        preferences.edit().putString(KEY_ZOTERO_USERNAME, username).apply();
+    // Convert username to lowercase before saving
+    if (username != null) {
+        username = username.toLowerCase();
     }
-    
+    preferences.edit().putString(KEY_ZOTERO_USERNAME, username).apply();
+    }
     public void clearAll() {
         preferences.edit().clear().apply();
     }
