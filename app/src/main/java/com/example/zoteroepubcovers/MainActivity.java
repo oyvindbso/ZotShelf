@@ -54,6 +54,8 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
 
         // Setup refresh listener
         swipeRefreshLayout.setOnRefreshListener(this::loadEpubs);
+        
+        updateTitle();
 
         // Check if we have Zotero credentials, if not show settings first
         if (!userPreferences.hasZoteroCredentials()) {
@@ -218,18 +220,23 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
     }
     
     @Override
+    @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    if (item.getItemId() == R.id.action_settings) {
-        startActivity(new Intent(this, SettingsActivity.class));
-        return true;
-    } else if (item.getItemId() == R.id.action_refresh) {
-        loadEpubs();
-        return true;
-    } else if (item.getItemId() == R.id.action_info) {
-        showInfoDialog();
-        return true;
+        if (item.getItemId() == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        } else if (item.getItemId() == R.id.action_refresh) {
+            loadEpubs();
+            return true;
+        } else if (item.getItemId() == R.id.action_info) {
+            showInfoDialog();
+            return true;
+        } else if (item.getItemId() == R.id.action_select_collection) {
+            showCollectionSelector();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
-    return super.onOptionsItemSelected(item);
     }
     private void showInfoDialog() {
     AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -300,14 +307,6 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
     private void updateTitle() {
         getSupportActionBar().setSubtitle(userPreferences.getSelectedCollectionName());
     }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        // Add after existing code in onCreate
-        updateTitle();
-    }
-
-
     @Override
     public void onCoverClick(EpubCoverItem item) {
         // Open the Zotero web library when a cover is clicked
@@ -319,23 +318,6 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         String url = "https://www.zotero.org/" + zoteroUsername + "/items/" + item.getId();
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         startActivity(intent);
-    }
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.action_settings) {
-            startActivity(new Intent(this, SettingsActivity.class));
-            return true;
-        } else if (item.getItemId() == R.id.action_refresh) {
-            loadEpubs();
-            return true;
-        } else if (item.getItemId() == R.id.action_info) {
-            showInfoDialog();
-            return true;
-        } else if (item.getItemId() == R.id.action_select_collection) {
-            showCollectionSelector();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
     }
     private void showCollectionSelector() {
     if (!userPreferences.hasZoteroCredentials()) {
