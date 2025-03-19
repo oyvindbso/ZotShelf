@@ -77,18 +77,19 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
             swipeRefreshLayout.setRefreshing(false);
             return;
         }
-
+    
         showLoading();
-
+    
         String userId = userPreferences.getZoteroUserId();
         String apiKey = userPreferences.getZoteroApiKey();
-
-        zoteroApiClient.getEpubItems(userId, apiKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
+        String collectionKey = userPreferences.getSelectedCollectionKey();
+    
+        zoteroApiClient.getEpubItemsByCollection(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
             @Override
             public void onSuccess(List<ZoteroItem> zoteroItems) {
                 processZoteroItems(zoteroItems);
             }
-
+    
             @Override
             public void onError(String errorMessage) {
                 runOnUiThread(() -> {
@@ -254,6 +255,59 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         }
     }
 
+    private void showCollectionDialog(List<ZoteroCollection> collections) {
+        // Create items array with "All Collections" as first option
+        List<String> collectionNames = new ArrayList<>();
+        List<String> collectionKeys = new ArrayList<>();
+        
+        collectionNames.add("All Collections");
+        collectionKeys.add("");
+        
+        for (ZoteroCollection collection : collections) {
+            collectionNames.add(collection.getName());
+            collectionKeys.add(collection.getKey());
+        }
+        
+        // Find the currently selected index
+        String currentCollectionKey = userPreferences.getSelectedCollectionKey();
+        int selectedIndex = 0;
+        for (int i = 0; i < collectionKeys.size(); i++) {
+            if (collectionKeys.get(i).equals(currentCollectionKey)) {
+                selectedIndex = i;
+                break;
+            }
+        }
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Select Collection");
+        builder.setSingleChoiceItems(
+                collectionNames.toArray(new String[0]), 
+                selectedIndex, 
+                (dialog, which) -> {
+                    userPreferences.setSelectedCollectionKey(collectionKeys.get(which));
+                    userPreferences.setSelectedCollectionName(collectionNames.get(which));
+                    updateTitle();
+                    loadEpubs();
+                    dialog.dismiss();
+                });
+        
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void updateTitle() {
+        getSupportActionBar().setSubtitle(userPreferences.getSelectedCollectionName());
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        // Add after existing code in onCreate
+        updateTitle();
+    }
+
+
     @Override
     public void onCoverClick(EpubCoverItem item) {
         // Open the Zotero web library when a cover is clicked
@@ -266,5 +320,50 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         startActivity(intent);
     }
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        } else if (item.getItemId() == R.id.action_refresh) {
+            loadEpubs();
+            return true;
+        } else if (item.getItemId() == R.id.action_info) {
+            showInfoDialog();
+            return true;
+        } else if (item.getItemId() == R.id.action_select_collection) {
+            showCollectionSelector();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+    private void showCollectionSelector() {
+    if (!userPreferences.hasZoteroCredentials()) {
+        Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
+        return;
+    }
     
+    progressBar.setVisibility(View.VISIBLE);
+    
+    String userId = userPreferences.getZoteroUserId();
+    String apiKey = userPreferences.getZoteroApiKey();
+    
+    zoteroApiClient.getCollections(userId, apiKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroCollection>>() {
+        @Override
+        public void onSuccess(List<ZoteroCollection> collections) {
+            runOnUiThread(() -> {
+                progressBar.setVisibility(View.GONE);
+                showCollectionDialog(collections);
+            });
+        }
+        
+        @Override
+        public void onError(String errorMessage) {
+            runOnUiThread(() -> {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(MainActivity.this, "Error loading collections: " + errorMessage, Toast.LENGTH_LONG).show();
+            });
+        }
+    });
+}
 }

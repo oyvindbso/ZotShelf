@@ -9,6 +9,8 @@ public class UserPreferences {
     private static final String KEY_ZOTERO_USER_ID = "zotero_user_id";
     private static final String KEY_ZOTERO_API_KEY = "zotero_api_key";
     private static final String KEY_ZOTERO_USERNAME = "zotero_username";
+    private static final String KEY_SELECTED_COLLECTION = "selected_collection";
+    private static final String KEY_SELECTED_COLLECTION_NAME = "selected_collection_name";
     
     private final SharedPreferences preferences;
     
@@ -47,12 +49,29 @@ public class UserPreferences {
     }
     
     public void setZoteroUsername(String username) {
-    // Convert username to lowercase before saving
-    if (username != null) {
-        username = username.toLowerCase();
+        // Convert username to lowercase before saving
+        if (username != null) {
+            username = username.toLowerCase();
+        }
+        preferences.edit().putString(KEY_ZOTERO_USERNAME, username).apply();
     }
-    preferences.edit().putString(KEY_ZOTERO_USERNAME, username).apply();
+
+    public String getSelectedCollectionKey() {
+        return preferences.getString(KEY_SELECTED_COLLECTION, "");
     }
+
+    public void setSelectedCollectionKey(String collectionKey) {
+        preferences.edit().putString(KEY_SELECTED_COLLECTION, collectionKey).apply();
+    }
+
+    public String getSelectedCollectionName() {
+        return preferences.getString(KEY_SELECTED_COLLECTION_NAME, "All Collections");
+    }
+
+    public void setSelectedCollectionName(String collectionName) {
+        preferences.edit().putString(KEY_SELECTED_COLLECTION_NAME, collectionName).apply();
+    }
+
     public void clearAll() {
         preferences.edit().clear().apply();
     }

@@ -13,6 +13,12 @@
         android:icon="@drawable/ic_settings"
         android:title="Settings"
         app:showAsAction="ifRoom" />
+    <!-- Collections -->
+    <item
+        android:id="@+id/action_select_collection"
+        android:icon="@drawable/ic_collections"
+        android:title="Select Collection"
+        app:showAsAction="ifRoom" />
  <!--information button -->
     <item
         android:id="@+id/action_info"

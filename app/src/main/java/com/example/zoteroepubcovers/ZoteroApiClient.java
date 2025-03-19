@@ -17,7 +17,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.ResponseBody;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
-import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -75,6 +74,22 @@ public class ZoteroApiClient {
                 @Query("itemType") String itemType,
                 @Query("limit") int limit
         );
+
+        @GET("users/{userId}/collections")
+        Call<List<ZoteroCollection>> getCollections(
+                @Path("userId") String userId,
+                @Header("Zotero-API-Key") String apiKey
+        );
+
+        @GET("users/{userId}/collections/{collectionKey}/items")
+        Call<List<ZoteroItem>> getItemsByCollection(
+                @Path("userId") String userId,
+                @Path("collectionKey") String collectionKey,
+                @Header("Zotero-API-Key") String apiKey,
+                @Query("format") String format,
+                @Query("itemType") String itemType,
+                @Query("limit") int limit
+        );
         
         @GET
         @Streaming
@@ -119,7 +134,61 @@ public class ZoteroApiClient {
             }
         });
     }
-    
+
+    public void getCollections(String userId, String apiKey, ZoteroCallback<List<ZoteroCollection>> callback) {
+        executor.execute(() -> {
+            Call<List<ZoteroCollection>> call = zoteroService.getCollections(userId, apiKey);
+
+            try {
+                Response<List<ZoteroCollection>> response = call.execute();
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body());
+                } else {
+                    callback.onError("Failed to fetch collections: " + response.code());
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "API error", e);
+                callback.onError("Network error: " + e.getMessage());
+            }
+        });
+    }
+
+    public void getEpubItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+        executor.execute(() -> {
+            // If no collection selected, get all items
+            if (collectionKey == null || collectionKey.isEmpty()) {
+                getEpubItems(userId, apiKey, callback);
+                return;
+            }
+
+            // Call the API with the collection filter
+            Call<List<ZoteroItem>> call = zoteroService.getItemsByCollection(userId, collectionKey, apiKey, "json", "attachment", 100);
+
+            try {
+                Response<List<ZoteroItem>> response = call.execute();
+                if (response.isSuccessful() && response.body() != null) {
+                    List<ZoteroItem> allItems = response.body();
+                    List<ZoteroItem> epubItems = new ArrayList<>();
+
+                    // Filter to only EPUB attachments
+                    for (ZoteroItem item : allItems) {
+                        if (item.getMimeType() != null && 
+                            item.getMimeType().equals("application/epub+zip")) {
+                            epubItems.add(item);
+                        }
+                    }
+
+                    callback.onSuccess(epubItems);
+                } else {
+                    callback.onError("Failed to fetch items: " + response.code());
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "API error", e);
+                callback.onError("Network error: " + e.getMessage());
+            }
+        });
+    }
+
     public void downloadEpub(ZoteroItem item, FileCallback callback) {
         executor.execute(() -> {
             // Check if we have the EPUB cached already
