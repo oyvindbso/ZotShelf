@@ -10,6 +10,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.app.AlertDialog;
 import android.view.LayoutInflater;
+import android.widget.Toast;  // Add this import statement
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
