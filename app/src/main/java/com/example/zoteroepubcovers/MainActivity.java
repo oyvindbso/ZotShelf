@@ -10,7 +10,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.app.AlertDialog;
 import android.view.LayoutInflater;
-import android.widget.Toast;  // Add this import statement
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -63,6 +63,31 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
             startActivity(new Intent(this, SettingsActivity.class));
         } else {
             loadEpubs();
+        }
+        
+        // Handle widget click intent
+        if (getIntent().hasExtra("fromWidget")) {
+            handleWidgetClick(getIntent());
+        }
+    }
+    
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (intent.hasExtra("fromWidget")) {
+            handleWidgetClick(intent);
+        }
+    }
+    
+    private void handleWidgetClick(Intent intent) {
+        if (intent.hasExtra("itemId") && intent.hasExtra("username")) {
+            String itemId = intent.getStringExtra("itemId");
+            String username = intent.getStringExtra("username");
+            
+            // Open the Zotero web library
+            String url = "https://www.zotero.org/" + username + "/items/" + itemId;
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            startActivity(browserIntent);
         }
     }
 
@@ -159,36 +184,7 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
                         }
                     });
                 }
-                @Override
-                protected void onCreate(Bundle savedInstanceState) {
-                    super.onCreate(savedInstanceState);
-                    // Existing code...
-                    
-                    // Handle widget click intent
-                    if (getIntent().hasExtra("fromWidget")) {
-                        handleWidgetClick(getIntent());
-                    }
-                }
                 
-                @Override
-                protected void onNewIntent(Intent intent) {
-                    super.onNewIntent(intent);
-                    if (intent.hasExtra("fromWidget")) {
-                        handleWidgetClick(intent);
-                    }
-                }
-                
-                private void handleWidgetClick(Intent intent) {
-                    if (intent.hasExtra("itemId") && intent.hasExtra("username")) {
-                        String itemId = intent.getStringExtra("itemId");
-                        String username = intent.getStringExtra("username");
-                        
-                        // Open the Zotero web library
-                        String url = "https://www.zotero.org/" + username + "/items/" + itemId;
-                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        startActivity(browserIntent);
-                    }
-                }
                 @Override
                 public void onError(ZoteroItem item, String errorMessage) {
                     // If download fails, still add the item but with error info and placeholder
@@ -307,7 +303,7 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         }
         
         // Find the currently selected index
-                String currentCollectionKey = userPreferences.getSelectedCollectionKey();
+        String currentCollectionKey = userPreferences.getSelectedCollectionKey();
         int selectedIndex = 0;
         for (int i = 0; i < collectionKeys.size(); i++) {
             if (collectionKeys.get(i).equals(currentCollectionKey)) {
