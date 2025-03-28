@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Zotero EPUB Covers</string>
     <string name="title_activity_settings">Settings</string>
@@ -5,6 +6,8 @@
     <string name="error_loading">Error loading EPUBs</string>
     <string name="settings_saved">Settings saved</string>
     <string name="enter_credentials">Please enter your Zotero credentials</string>
+    
+    <!-- Widget strings -->
     <string name="widget_item_image_desc">Book cover image</string>
     <string name="widget_empty">No EPUB covers available</string>
 </resources>
