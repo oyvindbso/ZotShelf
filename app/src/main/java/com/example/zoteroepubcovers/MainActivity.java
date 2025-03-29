@@ -343,7 +343,7 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
             return;
         }
         
-        String url = "https://www.zotero.org/" + zoteroUsername + "/items/" + item.getId();
+        String url = "https://www.zotero.org/" + zoteroUsername + "/items/" + item.getId()+"/reader";
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         startActivity(intent);
     }
