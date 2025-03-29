@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
             String username = intent.getStringExtra("username");
             
             // Open the Zotero web library
-            String url = "https://www.zotero.org/" + username + "/items/" + itemId;
+            String url = "https://www.zotero.org/" + username + "/items/" + itemId+"/reader";
             Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(browserIntent);
         }
