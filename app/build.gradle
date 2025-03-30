@@ -4,10 +4,6 @@ plugins {
 
 android {
     namespace 'com.example.zoteroepubcovers'
-    lintOptions {
-    abortOnError false
-    checkReleaseBuilds false
-    }
 
     testOptions {
     unitTests.all {
@@ -23,10 +19,6 @@ android {
         versionCode 1
         versionName "1.0"
     }
-    lintOptions {
-    abortOnError false
-    checkReleaseBuilds false
-    } 
 
     testOptions {
     unitTests.all {
@@ -44,6 +36,10 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
     }
 }
 
