@@ -18,6 +18,9 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.example.zoteroepubcovers.database.EpubCoverRepository;
+import com.example.zoteroepubcovers.utils.NetworkUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +34,8 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
     private SwipeRefreshLayout swipeRefreshLayout;
     private ZoteroApiClient zoteroApiClient;
     private UserPreferences userPreferences;
+    private EpubCoverRepository coverRepository;
+    private boolean isOfflineMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,6 +43,7 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         setContentView(R.layout.activity_main);
 
         userPreferences = new UserPreferences(this);
+        coverRepository = new EpubCoverRepository(this);
         
         progressBar = findViewById(R.id.progressBar);
         emptyView = findViewById(R.id.emptyView);
@@ -54,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         zoteroApiClient = new ZoteroApiClient(this);
 
         // Setup refresh listener
-        swipeRefreshLayout.setOnRefreshListener(this::loadEpubs);
+        swipeRefreshLayout.setOnRefreshListener(this::refreshCovers);
         
         updateTitle();
 
@@ -62,7 +68,7 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         if (!userPreferences.hasZoteroCredentials()) {
             startActivity(new Intent(this, SettingsActivity.class));
         } else {
-            loadEpubs();
+            loadCovers();
         }
         
         // Handle widget click intent
@@ -99,15 +105,82 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         return Math.max(2, screenWidthDp / itemWidthDp);
     }
 
-    private void loadEpubs() {
+    private void loadCovers() {
         if (!userPreferences.hasZoteroCredentials()) {
             showEmptyState("Please enter your Zotero credentials in settings");
             swipeRefreshLayout.setRefreshing(false);
             return;
         }
-    
+
         showLoading();
+        
+        // First check if we have cached covers
+        coverRepository.hasCachedCovers(hasCovers -> {
+            // If we have covers and we're offline, load from cache
+            if (hasCovers && !NetworkUtils.isNetworkAvailable(this)) {
+                isOfflineMode = true;
+                loadCachedCovers();
+                return;
+            }
+            
+            // If we have network, try to load from API
+            if (NetworkUtils.isNetworkAvailable(this)) {
+                isOfflineMode = false;
+                loadCoversFromApi();
+            } else {
+                // No network, check if we have cached data
+                if (hasCovers) {
+                    isOfflineMode = true;
+                    loadCachedCovers();
+                } else {
+                    // No cache and no network
+                    runOnUiThread(() -> {
+                        showEmptyState("No internet connection and no cached data");
+                        swipeRefreshLayout.setRefreshing(false);
+                    });
+                }
+            }
+        });
+    }
     
+    private void loadCachedCovers() {
+        coverRepository.getLocalCovers(new EpubCoverRepository.CoverRepositoryCallback() {
+            @Override
+            public void onCoversLoaded(List<EpubCoverItem> covers) {
+                runOnUiThread(() -> {
+                    if (covers.isEmpty()) {
+                        showEmptyState("No cached covers found");
+                    } else {
+                        updateUI(covers);
+                        if (isOfflineMode) {
+                            Toast.makeText(MainActivity.this, "Offline mode - showing cached covers", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                    swipeRefreshLayout.setRefreshing(false);
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                runOnUiThread(() -> {
+                    showEmptyState("Error loading cached covers: " + message);
+                    swipeRefreshLayout.setRefreshing(false);
+                });
+            }
+        });
+    }
+    
+    private void refreshCovers() {
+        if (!NetworkUtils.isNetworkAvailable(this)) {
+            Toast.makeText(this, "No internet connection. Showing cached data.", Toast.LENGTH_LONG).show();
+            swipeRefreshLayout.setRefreshing(false);
+            return;
+        }
+        
+        loadCoversFromApi();
+    }
+    
+    private void loadCoversFromApi() {
         String userId = userPreferences.getZoteroUserId();
         String apiKey = userPreferences.getZoteroApiKey();
         String collectionKey = userPreferences.getSelectedCollectionKey();
@@ -121,8 +194,18 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
             @Override
             public void onError(String errorMessage) {
                 runOnUiThread(() -> {
-                    showEmptyState("Error: " + errorMessage);
-                    swipeRefreshLayout.setRefreshing(false);
+                    // If API fails but we have cached data, show that
+                    coverRepository.hasCachedCovers(hasCovers -> {
+                        if (hasCovers) {
+                            loadCachedCovers();
+                            Toast.makeText(MainActivity.this, 
+                                    "Failed to update from Zotero: " + errorMessage, 
+                                    Toast.LENGTH_LONG).show();
+                        } else {
+                            showEmptyState("Error: " + errorMessage);
+                            swipeRefreshLayout.setRefreshing(false);
+                        }
+                    });
                 });
             }
         });
@@ -160,6 +243,8 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
                             
                             // Update UI when all items are processed
                             if (newCoverItems.size() == zoteroItems.size()) {
+                                // Save the covers to local database
+                                coverRepository.saveCovers(newCoverItems);
                                 updateUI(newCoverItems);
                             }
                         }
@@ -179,6 +264,8 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
                             
                             // Update UI when all items are processed
                             if (newCoverItems.size() == zoteroItems.size()) {
+                                // Save the covers to local database
+                                coverRepository.saveCovers(newCoverItems);
                                 updateUI(newCoverItems);
                             }
                         }
@@ -200,6 +287,8 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
                     
                     // Update UI when all items are processed
                     if (newCoverItems.size() == zoteroItems.size()) {
+                        // Save the covers to local database
+                        coverRepository.saveCovers(newCoverItems);
                         updateUI(newCoverItems);
                     }
                 }
@@ -252,7 +341,11 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
                 startActivity(new Intent(this, SettingsActivity.class));
                 return true;
             case R.id.action_refresh:
-                loadEpubs();
+                if (!NetworkUtils.isNetworkAvailable(this)) {
+                    Toast.makeText(this, "No internet connection available", Toast.LENGTH_SHORT).show();
+                } else {
+                    refreshCovers();
+                }
                 return true;
             case R.id.action_info:
                 showInfoDialog();
@@ -285,7 +378,7 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         super.onResume();
         // Reload if settings might have changed
         if (userPreferences.hasZoteroCredentials() && coverItems.isEmpty()) {
-            loadEpubs();
+            loadCovers();
         }
     }
 
@@ -321,7 +414,15 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
                     userPreferences.setSelectedCollectionKey(collectionKeys.get(which));
                     userPreferences.setSelectedCollectionName(collectionNames.get(which));
                     updateTitle();
-                    loadEpubs();
+                    
+                    // Clear the cache when switching collections
+                    coverRepository.clearCovers();
+                    
+                    if (NetworkUtils.isNetworkAvailable(this)) {
+                        loadCoversFromApi();
+                    } else {
+                        Toast.makeText(this, "No internet connection. Cannot load new collection.", Toast.LENGTH_LONG).show();
+                    }
                     dialog.dismiss();
                 });
         
@@ -332,7 +433,10 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
     }
 
     private void updateTitle() {
-        getSupportActionBar().setSubtitle(userPreferences.getSelectedCollectionName());
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setSubtitle(userPreferences.getSelectedCollectionName() + 
+                    (isOfflineMode ? " (Offline)" : ""));
+        }
     }
 
     @Override
@@ -343,7 +447,12 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
             return;
         }
         
-        String url = "https://www.zotero.org/" + zoteroUsername + "/items/" + item.getId();
+        if (!NetworkUtils.isNetworkAvailable(this)) {
+            Toast.makeText(this, "Cannot open reader - no internet connection", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        String url = "https://www.zotero.org/" + zoteroUsername + "/items/" + item.getId()+"/reader";
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         startActivity(intent);
     }
@@ -351,6 +460,11 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
     private void showCollectionSelector() {
         if (!userPreferences.hasZoteroCredentials()) {
             Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (!NetworkUtils.isNetworkAvailable(this)) {
+            Toast.makeText(this, "No internet connection. Cannot fetch collections.", Toast.LENGTH_LONG).show();
             return;
         }
         
