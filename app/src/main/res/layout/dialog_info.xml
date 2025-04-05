@@ -12,14 +12,14 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Zotero EPUB Covers displays all your EPUB books from your Zotero library in a convenient grid view."
+            android:text="@string/app_description"
             android:textSize="16sp"
             android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Features:"
+            android:text="@string/features"
             android:textStyle="bold"
             android:textSize="16sp"
             android:layout_marginBottom="8dp" />
@@ -27,21 +27,21 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="• View all your EPUB books at a glance\n• Tap any cover to open the book in your Zotero Web Library\n• Pull down to refresh your collection"
+            android:text="@string/feature_list"
             android:textSize="16sp"
             android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="To use this app, you need to enter your Zotero credentials in the Settings."
+            android:text="@string/credentials"
             android:textSize="16sp"
             android:layout_marginBottom="8dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="You can find your Zotero API key at:\nhttps://www.zotero.org/settings/keys"
+            android:text="@string/keys"
             android:textSize="16sp"
             android:layout_marginBottom="8dp" />
 
@@ -50,14 +50,14 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:autoLink="web"
-            android:text="This app was developed by Øyvind Solheim (@Oyvindbs@nerdculture.de) with a lot of help from the Claude AI. See the code on https://www.github.com/oyvindbso/zoteview"
+            android:text="@string/who"
             android:textColorLink="#1E88E5"
             android:textSize="16sp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Enjoy ZotEView? Buy me a coffee: https://buymeacoffee.com/oyvindbs or propose new features/code on gihub (above)."
+            android:text="@string/coffe"
             android:autoLink="web"
             android:textColorLink="#1E88E5"
             android:textSize="16sp"
