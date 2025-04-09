@@ -27,6 +27,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements CoverGridAdapter.CoverClickListener {
 
     private RecyclerView recyclerView;
+    private static final int REQUEST_CODE_SELECT_COLLECTION = 1001;
     private CoverGridAdapter adapter;
     private List<EpubCoverItem> coverItems = new ArrayList<>();
     private ProgressBar progressBar;
@@ -382,56 +383,6 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         }
     }
 
-    private void showCollectionDialog(List<ZoteroCollection> collections) {
-        // Create items array with "All Collections" as first option
-        List<String> collectionNames = new ArrayList<>();
-        List<String> collectionKeys = new ArrayList<>();
-        
-        collectionNames.add("All Collections");
-        collectionKeys.add("");
-        
-        for (ZoteroCollection collection : collections) {
-            collectionNames.add(collection.getName());
-            collectionKeys.add(collection.getKey());
-        }
-        
-        // Find the currently selected index
-        String currentCollectionKey = userPreferences.getSelectedCollectionKey();
-        int selectedIndex = 0;
-        for (int i = 0; i < collectionKeys.size(); i++) {
-            if (collectionKeys.get(i).equals(currentCollectionKey)) {
-                selectedIndex = i;
-                break;
-            }
-        }
-        
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Select Collection");
-        builder.setSingleChoiceItems(
-                collectionNames.toArray(new String[0]), 
-                selectedIndex, 
-                (dialog, which) -> {
-                    userPreferences.setSelectedCollectionKey(collectionKeys.get(which));
-                    userPreferences.setSelectedCollectionName(collectionNames.get(which));
-                    updateTitle();
-                    
-                    // Clear the cache when switching collections
-                    coverRepository.clearCovers();
-                    
-                    if (NetworkUtils.isNetworkAvailable(this)) {
-                        loadCoversFromApi();
-                    } else {
-                        Toast.makeText(this, "No internet connection. Cannot load new collection.", Toast.LENGTH_LONG).show();
-                    }
-                    dialog.dismiss();
-                });
-        
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
-        
-        AlertDialog dialog = builder.create();
-        dialog.show();
-    }
-
     private void updateTitle() {
         if (getSupportActionBar() != null) {
             getSupportActionBar().setSubtitle(userPreferences.getSelectedCollectionName() + 
@@ -458,37 +409,39 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
     }
 
     private void showCollectionSelector() {
-        if (!userPreferences.hasZoteroCredentials()) {
-            Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        if (!NetworkUtils.isNetworkAvailable(this)) {
-            Toast.makeText(this, "No internet connection. Cannot fetch collections.", Toast.LENGTH_LONG).show();
-            return;
-        }
-        
-        progressBar.setVisibility(View.VISIBLE);
-        
-        String userId = userPreferences.getZoteroUserId();
-        String apiKey = userPreferences.getZoteroApiKey();
-        
-        zoteroApiClient.getCollections(userId, apiKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroCollection>>() {
-            @Override
-            public void onSuccess(List<ZoteroCollection> collections) {
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    showCollectionDialog(collections);
-                });
-            }
-            
-            @Override
-            public void onError(String errorMessage) {
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    Toast.makeText(MainActivity.this, "Error loading collections: " + errorMessage, Toast.LENGTH_LONG).show();
-                });
-            }
-        });
+    if (!userPreferences.hasZoteroCredentials()) {
+        Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
+        return;
     }
+    
+    if (!NetworkUtils.isNetworkAvailable(this)) {
+        Toast.makeText(this, "No internet connection. Cannot fetch collections.", Toast.LENGTH_LONG).show();
+        return;
+    }
+    
+    // Launch the collection tree activity
+    Intent intent = new Intent(this, CollectionTreeActivity.class);
+    startActivityForResult(intent, REQUEST_CODE_SELECT_COLLECTION);
+}
+
+@Override
+protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    
+    if (requestCode == REQUEST_CODE_SELECT_COLLECTION && resultCode == RESULT_OK) {
+        // Collection was selected, update the UI
+        updateTitle();
+        
+        // Clear the cache when switching collections
+        coverRepository.clearCovers();
+        
+        // Reload covers with the new collection
+        if (NetworkUtils.isNetworkAvailable(this)) {
+            loadCoversFromApi();
+        } else {
+            Toast.makeText(this, "No internet connection. Cannot load new collection.", Toast.LENGTH_LONG).show();
+        }
+    }
+}
+
 }
