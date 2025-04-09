@@ -6,7 +6,14 @@
     <string name="error_loading">Error loading EPUBs</string>
     <string name="settings_saved">Settings saved</string>
     <string name="enter_credentials">Please enter your Zotero credentials</string>
-    
+    <string name="keys">You can find your Zotero API key at:\nhttps://www.zotero.org/settings/keys</string>
+    <string name="credentials">To use this app, you need to enter your Zotero credentials in the Settings.</string>
+    <string name="features">Features:</string>
+    <string name="feature_list">• View all your EPUB books at a glance\n• Tap any cover to open the book in your Zotero Web Library\n• Pull down to refresh your collection</string>
+    <string name="who">This app was developed by Øyvind Solheim (@Oyvindbs@nerdculture.de) with a lot of help from the Claude AI. See the code or propose changes on https://www.github.com/oyvindbso/zoteview</string>
+    <string name="coffee">Enjoy ZotEView? Buy me a coffee: https://buymeacoffee.com/oyvindbs or propose new features/code on gihub (above).</string>
+    <string name="app_description">Zotero EPUB Covers displays all your EPUB books from your Zotero library in a convenient grid view.</string>
+
     <!-- Widget strings -->
     <string name="widget_item_image_desc">Book cover image</string>
     <string name="widget_empty">No EPUB covers available</string>
