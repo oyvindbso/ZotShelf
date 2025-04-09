@@ -57,7 +57,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/coffe"
+            android:text="@string/coffee"
             android:autoLink="web"
             android:textColorLink="#1E88E5"
             android:textSize="16sp"
