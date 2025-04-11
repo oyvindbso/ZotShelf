@@ -136,22 +136,25 @@ public class ZoteroApiClient {
     }
 
     public void getCollections(String userId, String apiKey, ZoteroCallback<List<ZoteroCollection>> callback) {
-        executor.execute(() -> {
-            Call<List<ZoteroCollection>> call = zoteroService.getCollections(userId, apiKey);
+    executor.execute(() -> {
+        Log.d("ZoteroApiClient", "Getting collections for user: " + userId);
+        Call<List<ZoteroCollection>> call = zoteroService.getCollections(userId, apiKey);
 
-            try {
-                Response<List<ZoteroCollection>> response = call.execute();
-                if (response.isSuccessful() && response.body() != null) {
-                    callback.onSuccess(response.body());
-                } else {
-                    callback.onError("Failed to fetch collections: " + response.code());
-                }
-            } catch (IOException e) {
-                Log.e(TAG, "API error", e);
-                callback.onError("Network error: " + e.getMessage());
+        try {
+            Response<List<ZoteroCollection>> response = call.execute();
+            if (response.isSuccessful() && response.body() != null) {
+                Log.d("ZoteroApiClient", "Received " + response.body().size() + " collections");
+                callback.onSuccess(response.body());
+            } else {
+                Log.e("ZoteroApiClient", "Failed to fetch collections: " + response.code());
+                callback.onError("Failed to fetch collections: " + response.code());
             }
-        });
-    }
+        } catch (IOException e) {
+            Log.e("ZoteroApiClient", "API error", e);
+            callback.onError("Network error: " + e.getMessage());
+        }
+    });
+}
 
     public void getEpubItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
         executor.execute(() -> {
@@ -257,3 +260,6 @@ public class ZoteroApiClient {
         }
     }
 }
+
+
+

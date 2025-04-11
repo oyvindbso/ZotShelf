@@ -34,3 +34,21 @@ public class ZoteroCollection {
         return getName();
     }
 }
+// Verify these fields in ZoteroCollection.java
+public class ZoteroCollection {
+    @SerializedName("key")
+    private String key;
+    
+    @SerializedName("data")
+    private ZoteroCollectionData data;
+    
+    public static class ZoteroCollectionData {
+        @SerializedName("name")
+        private String name;
+        
+        @SerializedName("parentCollection")
+        private String parentCollection;
+    }
+    
+    // ...getters and setters
+}
