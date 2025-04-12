@@ -79,11 +79,15 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
         String apiKey = userPreferences.getZoteroApiKey();
 
         zoteroApiClient.getCollections(userId, apiKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroCollection>>() {
+        // In the onSuccess method of loadCollections()
             @Override
             public void onSuccess(List<ZoteroCollection> collections) {
+                Log.d("CollectionTree", "Received " + collections.size() + " collections from API");
+                for (ZoteroCollection collection : collections) {
+                    Log.d("CollectionTree", "Collection: " + collection.getName() + ", Key: " + collection.getKey() + ", Parent: " + collection.getParentCollection());
+                }
                 buildCollectionTree(collections);
             }
-
             @Override
             public void onError(String errorMessage) {
                 runOnUiThread(() -> {
@@ -227,12 +231,3 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
     }
 }
 
-// In the onSuccess method of loadCollections()
-@Override
-public void onSuccess(List<ZoteroCollection> collections) {
-    Log.d("CollectionTree", "Received " + collections.size() + " collections from API");
-    for (ZoteroCollection collection : collections) {
-        Log.d("CollectionTree", "Collection: " + collection.getName() + ", Key: " + collection.getKey() + ", Parent: " + collection.getParentCollection());
-    }
-    buildCollectionTree(collections);
-}
