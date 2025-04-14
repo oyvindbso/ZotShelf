@@ -135,7 +135,9 @@ public class ZoteroApiClient {
         });
     }
 
-    public void getCollections(String userId, String apiKey, ZoteroCallback<List<ZoteroCollection>> callback) {
+    // Add this improved collection method to the ZoteroApiClient.java class
+
+public void getCollections(String userId, String apiKey, ZoteroCallback<List<ZoteroCollection>> callback) {
     executor.execute(() -> {
         Log.d("ZoteroApiClient", "Getting collections for user: " + userId);
         Call<List<ZoteroCollection>> call = zoteroService.getCollections(userId, apiKey);
@@ -143,11 +145,29 @@ public class ZoteroApiClient {
         try {
             Response<List<ZoteroCollection>> response = call.execute();
             if (response.isSuccessful() && response.body() != null) {
-                Log.d("ZoteroApiClient", "Received " + response.body().size() + " collections");
-                callback.onSuccess(response.body());
+                List<ZoteroCollection> collections = response.body();
+                Log.d("ZoteroApiClient", "Received " + collections.size() + " collections");
+                
+                // Log each collection for debugging
+                for (ZoteroCollection collection : collections) {
+                    Log.d("ZoteroApiClient", "Collection: " + collection.getName() + 
+                          ", Key: " + collection.getKey() + 
+                          ", Parent: " + collection.getParentCollection());
+                }
+                
+                callback.onSuccess(collections);
             } else {
                 Log.e("ZoteroApiClient", "Failed to fetch collections: " + response.code());
-                callback.onError("Failed to fetch collections: " + response.code());
+                // Check for specific error codes
+                if (response.code() == 401) {
+                    callback.onError("Authentication failed. Check your API key and user ID.");
+                } else if (response.code() == 403) {
+                    callback.onError("Access forbidden. Check your API permissions.");
+                } else if (response.code() == 404) {
+                    callback.onError("User not found. Check your user ID.");
+                } else {
+                    callback.onError("Failed to fetch collections: HTTP " + response.code());
+                }
             }
         } catch (IOException e) {
             Log.e("ZoteroApiClient", "API error", e);
