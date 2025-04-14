@@ -383,12 +383,17 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         }
     }
 
+    
     private void updateTitle() {
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setSubtitle(userPreferences.getSelectedCollectionName() + 
-                    (isOfflineMode ? " (Offline)" : ""));
+        String collectionName = userPreferences.getSelectedCollectionName();
+        if (collectionName == null || collectionName.isEmpty()) {
+            collectionName = "All Collections";
         }
+        getSupportActionBar().setSubtitle(collectionName + 
+                (isOfflineMode ? " (Offline)" : ""));
     }
+}
 
     @Override
     public void onCoverClick(EpubCoverItem item) {
