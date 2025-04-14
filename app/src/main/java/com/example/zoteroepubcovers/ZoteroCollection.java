@@ -1,8 +1,11 @@
 package com.example.zoteroepubcovers;
 
+import android.util.Log;
 import com.google.gson.annotations.SerializedName;
 
 public class ZoteroCollection {
+    private static final String TAG = "ZoteroCollection";
+    
     @SerializedName("key")
     private String key;
     
@@ -22,15 +25,29 @@ public class ZoteroCollection {
     }
     
     public String getName() {
-        return data != null ? data.name : "";
+        if (data == null) {
+            Log.w(TAG, "Collection data is null for key: " + key);
+            return key != null ? key : "Unknown Collection";
+        }
+        
+        if (data.name == null || data.name.isEmpty()) {
+            Log.w(TAG, "Collection name is empty for key: " + key);
+            return "Unnamed Collection";
+        }
+        
+        return data.name;
     }
     
     public String getParentCollection() {
-        return data != null ? data.parentCollection : null;
+        if (data == null) {
+            return null;
+        }
+        return data.parentCollection;
     }
     
     @Override
     public String toString() {
-        return getName();
+        return "ZoteroCollection{key='" + key + "', name='" + getName() + 
+               "', parent='" + getParentCollection() + "'}";
     }
 }

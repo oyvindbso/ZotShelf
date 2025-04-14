@@ -1,6 +1,7 @@
 package com.example.zoteroepubcovers;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +16,7 @@ import java.util.List;
 
 public class CollectionTreeAdapter extends RecyclerView.Adapter<CollectionTreeAdapter.CollectionViewHolder> {
 
+    private static final String TAG = "CollectionTreeAdapter";
     private final Context context;
     private final List<CollectionTreeItem> items;
     private final CollectionClickListener listener;
@@ -40,25 +42,27 @@ public class CollectionTreeAdapter extends RecyclerView.Adapter<CollectionTreeAd
     public void onBindViewHolder(@NonNull CollectionViewHolder holder, int position) {
         CollectionTreeItem item = items.get(position);
         
+        Log.d(TAG, "Binding item: " + item.getName() + " at level " + item.getLevel() + ", selected: " + item.isSelected());
+        
         // Apply indentation based on level
         int indentPx = (int) (16 * context.getResources().getDisplayMetrics().density) * item.getLevel();
         ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) holder.cardView.getLayoutParams();
         params.setMarginStart(indentPx);
         holder.cardView.setLayoutParams(params);
         
-        // Set icon based on whether the item has children
-        if (item.hasChildren()) {
+        // Set icon based on whether the item has children and its level
+        if (item.getLevel() == 0) {
+            // Special case for "All Collections"
+            holder.iconView.setVisibility(View.VISIBLE);
+            holder.iconView.setImageResource(R.drawable.ic_collections);
+        } else if (item.hasChildren()) {
+            // Folders with children
             holder.iconView.setVisibility(View.VISIBLE);
             holder.iconView.setImageResource(R.drawable.ic_folder);
         } else {
-            if (item.getLevel() == 0) {
-                // Special case for "All Collections"
-                holder.iconView.setVisibility(View.VISIBLE);
-                holder.iconView.setImageResource(R.drawable.ic_collections);
-            } else {
-                holder.iconView.setVisibility(View.VISIBLE);
-                holder.iconView.setImageResource(R.drawable.ic_collection_item);
-            }
+            // End items/collections with no children
+            holder.iconView.setVisibility(View.VISIBLE);
+            holder.iconView.setImageResource(R.drawable.ic_collection_item);
         }
         
         // Set name
@@ -66,11 +70,11 @@ public class CollectionTreeAdapter extends RecyclerView.Adapter<CollectionTreeAd
         
         // Highlight selected item
         if (item.isSelected()) {
-            holder.cardView.setCardBackgroundColor(context.getColor(R.color.purple_200));
-            holder.nameView.setTextColor(context.getColor(R.color.black));
+            holder.cardView.setCardBackgroundColor(context.getResources().getColor(R.color.purple_200, null));
+            holder.nameView.setTextColor(context.getResources().getColor(R.color.black, null));
         } else {
-            holder.cardView.setCardBackgroundColor(context.getColor(android.R.color.white));
-            holder.nameView.setTextColor(context.getColor(R.color.black));
+            holder.cardView.setCardBackgroundColor(context.getResources().getColor(android.R.color.white, null));
+            holder.nameView.setTextColor(context.getResources().getColor(R.color.black, null));
         }
         
         // Set click listener
