@@ -54,7 +54,9 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         // Setup RecyclerView with Grid Layout
         int spanCount = calculateSpanCount();
         recyclerView.setLayoutManager(new GridLayoutManager(this, spanCount));
-        adapter = new CoverGridAdapter(this, coverItems, this);
+        int displayMode = userPreferences.getDisplayMode();
+        adapter = new CoverGridAdapter(this, coverItems, this, displayMode);
+
         recyclerView.setAdapter(adapter);
 
         // Initialize Zotero API client
@@ -297,22 +299,27 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         }
     }
 
-    private void updateUI(final List<EpubCoverItem> newItems) {
-        runOnUiThread(() -> {
-            coverItems.clear();
-            coverItems.addAll(newItems);
-            adapter.notifyDataSetChanged();
-            
-            if (coverItems.isEmpty()) {
-                showEmptyState("No EPUB files found");
-            } else {
-                hideEmptyState();
-            }
-            
-            progressBar.setVisibility(View.GONE);
-            swipeRefreshLayout.setRefreshing(false);
-        });
-    }
+private void updateUI(final List<EpubCoverItem> newItems) {
+    runOnUiThread(() -> {
+        coverItems.clear();
+        coverItems.addAll(newItems);
+        
+        // Re-create the adapter with the current display mode
+        int displayMode = userPreferences.getDisplayMode();
+        adapter = new CoverGridAdapter(this, coverItems, this, displayMode);
+        recyclerView.setAdapter(adapter);
+        
+        if (coverItems.isEmpty()) {
+            showEmptyState("No EPUB files found");
+        } else {
+            hideEmptyState();
+        }
+        
+        progressBar.setVisibility(View.GONE);
+        swipeRefreshLayout.setRefreshing(false);
+    });
+}
+
 
     private void showLoading() {
         progressBar.setVisibility(View.VISIBLE);
@@ -353,6 +360,9 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
                 return true;
             case R.id.action_select_collection:
                 showCollectionSelector();
+                return true;
+            case R.id.action_change_display:
+                showDisplayModeDialog();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -447,6 +457,28 @@ protected void onActivityResult(int requestCode, int resultCode, Intent data) {
             Toast.makeText(this, "No internet connection. Cannot load new collection.", Toast.LENGTH_LONG).show();
         }
     }
+}
+
+private void showDisplayModeDialog() {
+    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    builder.setTitle("Display Mode");
+    
+    String[] options = {"Title only", "Author only", "Author - Title"};
+    int currentMode = userPreferences.getDisplayMode();
+    
+    builder.setSingleChoiceItems(options, currentMode, (dialog, which) -> {
+        userPreferences.setDisplayMode(which);
+        dialog.dismiss();
+        
+        // Refresh the adapter to show the new display mode
+        adapter = new CoverGridAdapter(this, coverItems, this, which);
+        recyclerView.setAdapter(adapter);
+    });
+    
+    builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+    
+    AlertDialog dialog = builder.create();
+    dialog.show();
 }
 
 }

@@ -3,6 +3,8 @@ package com.example.zoteroepubcovers;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.widget.Button;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -16,6 +18,10 @@ public class SettingsActivity extends AppCompatActivity {
     private TextInputEditText editZoteroUsername;
     private TextInputEditText editZoteroUserId;
     private TextInputEditText editZoteroApiKey;
+    private RadioGroup radioGroupDisplayMode;
+    private RadioButton radioTitleOnly;
+    private RadioButton radioAuthorOnly;
+    private RadioButton radioAuthorTitle;
     private Button buttonSave;
     private UserPreferences userPreferences;
 
@@ -35,6 +41,10 @@ public class SettingsActivity extends AppCompatActivity {
         editZoteroUsername = findViewById(R.id.editZoteroUsername);
         editZoteroUserId = findViewById(R.id.editZoteroUserId);
         editZoteroApiKey = findViewById(R.id.editZoteroApiKey);
+        radioGroupDisplayMode = findViewById(R.id.radioGroupDisplayMode);
+        radioTitleOnly = findViewById(R.id.radioTitleOnly);
+        radioAuthorOnly = findViewById(R.id.radioAuthorOnly);
+        radioAuthorTitle = findViewById(R.id.radioAuthorTitle);
         buttonSave = findViewById(R.id.buttonSave);
 
         // Initialize preferences
@@ -51,6 +61,21 @@ public class SettingsActivity extends AppCompatActivity {
         editZoteroUsername.setText(userPreferences.getZoteroUsername());
         editZoteroUserId.setText(userPreferences.getZoteroUserId());
         editZoteroApiKey.setText(userPreferences.getZoteroApiKey());
+        
+        // Set the display mode radio button
+        int displayMode = userPreferences.getDisplayMode();
+        switch (displayMode) {
+            case UserPreferences.DISPLAY_AUTHOR_ONLY:
+                radioAuthorOnly.setChecked(true);
+                break;
+            case UserPreferences.DISPLAY_AUTHOR_TITLE:
+                radioAuthorTitle.setChecked(true);
+                break;
+            case UserPreferences.DISPLAY_TITLE_ONLY:
+            default:
+                radioTitleOnly.setChecked(true);
+                break;
+        }
     }
 
     private void savePreferences() {
@@ -68,6 +93,18 @@ public class SettingsActivity extends AppCompatActivity {
         userPreferences.setZoteroUsername(username);
         userPreferences.setZoteroUserId(userId);
         userPreferences.setZoteroApiKey(apiKey);
+        
+        // Save display mode
+        int displayMode;
+        int selectedRadioButtonId = radioGroupDisplayMode.getCheckedRadioButtonId();
+        if (selectedRadioButtonId == R.id.radioAuthorOnly) {
+            displayMode = UserPreferences.DISPLAY_AUTHOR_ONLY;
+        } else if (selectedRadioButtonId == R.id.radioAuthorTitle) {
+            displayMode = UserPreferences.DISPLAY_AUTHOR_TITLE;
+        } else {
+            displayMode = UserPreferences.DISPLAY_TITLE_ONLY;
+        }
+        userPreferences.setDisplayMode(displayMode);
 
         Toast.makeText(this, R.string.settings_saved, Toast.LENGTH_SHORT).show();
         finish();

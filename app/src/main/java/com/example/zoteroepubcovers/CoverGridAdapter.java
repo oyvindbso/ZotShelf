@@ -20,15 +20,22 @@ public class CoverGridAdapter extends RecyclerView.Adapter<CoverGridAdapter.Cove
     private final Context context;
     private final List<EpubCoverItem> coverItems;
     private final CoverClickListener listener;
+    private final int displayMode;
 
     public interface CoverClickListener {
         void onCoverClick(EpubCoverItem item);
     }
 
-    public CoverGridAdapter(Context context, List<EpubCoverItem> coverItems, CoverClickListener listener) {
+    public CoverGridAdapter(Context context, List<EpubCoverItem> coverItems, CoverClickListener listener, int displayMode) {
         this.context = context;
         this.coverItems = coverItems;
         this.listener = listener;
+        this.displayMode = displayMode;
+    }
+    
+    // Getter for display mode - needed for checking if mode has changed
+    public int getDisplayMode() {
+        return displayMode;
     }
 
     @NonNull
@@ -57,8 +64,20 @@ public class CoverGridAdapter extends RecyclerView.Adapter<CoverGridAdapter.Cove
                     .into(holder.coverImage);
         }
         
-        // Set title
-        holder.titleText.setText(item.getTitle());
+        // Set text based on display mode
+        switch (displayMode) {
+            case UserPreferences.DISPLAY_AUTHOR_ONLY:
+                holder.titleText.setText(item.getAuthors());
+                break;
+            case UserPreferences.DISPLAY_AUTHOR_TITLE:
+                String authorTitle = item.getAuthors() + " - " + item.getTitle();
+                holder.titleText.setText(authorTitle);
+                break;
+            case UserPreferences.DISPLAY_TITLE_ONLY:
+            default:
+                holder.titleText.setText(item.getTitle());
+                break;
+        }
         
         // Set click listener
         holder.itemView.setOnClickListener(v -> {

@@ -89,6 +89,48 @@
                 android:text="You can find your Zotero user ID and create an API key at https://www.zotero.org/settings/keys"
                 android:textSize="14sp" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:text="Display Settings"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Book information to display:"
+                android:textSize="16sp" />
+
+            <RadioGroup
+                android:id="@+id/radioGroupDisplayMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp">
+
+                <RadioButton
+                    android:id="@+id/radioTitleOnly"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Title only" />
+
+                <RadioButton
+                    android:id="@+id/radioAuthorOnly"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Author only" />
+
+                <RadioButton
+                    android:id="@+id/radioAuthorTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Author - Title" />
+
+            </RadioGroup>
+
             <Button
                 android:id="@+id/buttonSave"
                 android:layout_width="match_parent"

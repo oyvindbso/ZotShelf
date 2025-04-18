@@ -22,4 +22,13 @@
     <!-- Widget strings -->
     <string name="widget_item_image_desc">Book cover image</string>
     <string name="widget_empty">No EPUB covers available</string>
+    <!-- display mode -->
+    <string name="display_mode_title">Display Mode</string>
+    <string name="display_mode_title_only">Title only</string>
+    <string name="display_mode_author_only">Author only</string>
+    <string name="display_mode_author_title">Author - Title</string>
+    <string name="display_settings">Display Settings</string>
+    <string name="book_info_display">Book information to display:</string>
+    <string name="change_display_mode">Change Display Mode</string>
+    <string name="cancel">Cancel</string>
 </resources>

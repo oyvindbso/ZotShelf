@@ -11,6 +11,12 @@ public class UserPreferences {
     private static final String KEY_ZOTERO_USERNAME = "zotero_username";
     private static final String KEY_SELECTED_COLLECTION = "selected_collection";
     private static final String KEY_SELECTED_COLLECTION_NAME = "selected_collection_name";
+    private static final String KEY_DISPLAY_MODE = "display_mode";
+    
+    // Display mode constants
+    public static final int DISPLAY_TITLE_ONLY = 0;
+    public static final int DISPLAY_AUTHOR_ONLY = 1;
+    public static final int DISPLAY_AUTHOR_TITLE = 2;
     
     private final SharedPreferences preferences;
     
@@ -70,6 +76,14 @@ public class UserPreferences {
 
     public void setSelectedCollectionName(String collectionName) {
         preferences.edit().putString(KEY_SELECTED_COLLECTION_NAME, collectionName).apply();
+    }
+    
+    public int getDisplayMode() {
+        return preferences.getInt(KEY_DISPLAY_MODE, DISPLAY_TITLE_ONLY); // Default to title only
+    }
+    
+    public void setDisplayMode(int displayMode) {
+        preferences.edit().putInt(KEY_DISPLAY_MODE, displayMode).apply();
     }
 
     public void clearAll() {
