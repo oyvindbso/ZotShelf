@@ -1,7 +1,6 @@
 package com.example.zoteroepubcovers;
 
 import android.content.Context;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,26 +41,21 @@ public class CollectionTreeAdapter extends RecyclerView.Adapter<CollectionTreeAd
     public void onBindViewHolder(@NonNull CollectionViewHolder holder, int position) {
         CollectionTreeItem item = items.get(position);
         
-        Log.d(TAG, "Binding item: " + item.getName() + " at level " + item.getLevel() + ", selected: " + item.isSelected());
-        
-        // Apply indentation based on level
-        int indentPx = (int) (16 * context.getResources().getDisplayMetrics().density) * item.getLevel();
+        // Apply indentation based on level - this creates the visual hierarchy
+        int indentPx = (int) (24 * context.getResources().getDisplayMetrics().density) * item.getLevel();
         ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) holder.cardView.getLayoutParams();
         params.setMarginStart(indentPx);
         holder.cardView.setLayoutParams(params);
         
-        // Set icon based on whether the item has children and its level
+        // Set appropriate icon based on the item type
         if (item.getLevel() == 0) {
-            // Special case for "All Collections"
-            holder.iconView.setVisibility(View.VISIBLE);
+            // "All Collections" item
             holder.iconView.setImageResource(R.drawable.ic_collections);
         } else if (item.hasChildren()) {
-            // Folders with children
-            holder.iconView.setVisibility(View.VISIBLE);
+            // Collection with children (folder)
             holder.iconView.setImageResource(R.drawable.ic_folder);
         } else {
-            // End items/collections with no children
-            holder.iconView.setVisibility(View.VISIBLE);
+            // Collection without children (leaf node)
             holder.iconView.setImageResource(R.drawable.ic_collection_item);
         }
         
@@ -71,10 +65,8 @@ public class CollectionTreeAdapter extends RecyclerView.Adapter<CollectionTreeAd
         // Highlight selected item
         if (item.isSelected()) {
             holder.cardView.setCardBackgroundColor(context.getResources().getColor(R.color.purple_200, null));
-            holder.nameView.setTextColor(context.getResources().getColor(R.color.black, null));
         } else {
             holder.cardView.setCardBackgroundColor(context.getResources().getColor(android.R.color.white, null));
-            holder.nameView.setTextColor(context.getResources().getColor(R.color.black, null));
         }
         
         // Set click listener

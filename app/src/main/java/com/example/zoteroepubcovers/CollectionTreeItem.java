@@ -11,13 +11,21 @@ public class CollectionTreeItem {
     private boolean selected;
     private boolean expanded;
 
+    /**
+     * Constructor for collection tree items
+     * 
+     * @param id The unique identifier (collection key)
+     * @param name The display name of the collection
+     * @param level The nesting level (0 for root, 1 for first level, etc.)
+     * @param hasChildren Whether this item has child collections
+     */
     public CollectionTreeItem(String id, String name, int level, boolean hasChildren) {
         this.id = id;
         this.name = name;
         this.level = level;
         this.hasChildren = hasChildren;
         this.selected = false;
-        this.expanded = true; // Start expanded
+        this.expanded = true; // Start expanded by default
     }
 
     public String getId() {
@@ -54,5 +62,16 @@ public class CollectionTreeItem {
 
     public void toggleExpanded() {
         this.expanded = !this.expanded;
+    }
+    
+    @Override
+    public String toString() {
+        return "TreeItem{" +
+                "id='" + id + '\'' +
+                ", name='" + name + '\'' +
+                ", level=" + level +
+                ", selected=" + selected +
+                ", hasChildren=" + hasChildren +
+                '}';
     }
 }

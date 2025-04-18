@@ -6,14 +6,16 @@
     android:id="@+id/cardViewCollection"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="4dp"
+    android:layout_marginStart="4dp"
+    android:layout_marginEnd="8dp"
+    android:layout_marginVertical="2dp"
     app:cardCornerRadius="4dp"
     app:cardElevation="1dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp">
+        android:padding="10dp">
 
         <ImageView
             android:id="@+id/imageViewCollectionIcon"
@@ -29,8 +31,10 @@
             android:id="@+id/textViewCollectionName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:textSize="16sp"
+            android:layout_marginStart="12dp"
+            android:textSize="15sp"
+            android:ellipsize="end"
+            android:maxLines="1"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/imageViewCollectionIcon"
