@@ -48,8 +48,11 @@ public class ZoteroApiClient {
         }
         
         // Setup HTTP client with logging
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BASIC);
+        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor(message -> {
+            // Log all API requests and responses
+            Log.d(TAG, message);
+        });
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY); // Change to BODY for full request/response logging
         
         OkHttpClient client = new OkHttpClient.Builder()
                 .addInterceptor(loggingInterceptor)
@@ -135,46 +138,78 @@ public class ZoteroApiClient {
         });
     }
 
-    // Add this improved collection method to the ZoteroApiClient.java class
-
-public void getCollections(String userId, String apiKey, ZoteroCallback<List<ZoteroCollection>> callback) {
-    executor.execute(() -> {
-        Log.d("ZoteroApiClient", "Getting collections for user: " + userId);
-        Call<List<ZoteroCollection>> call = zoteroService.getCollections(userId, apiKey);
-
-        try {
-            Response<List<ZoteroCollection>> response = call.execute();
-            if (response.isSuccessful() && response.body() != null) {
-                List<ZoteroCollection> collections = response.body();
-                Log.d("ZoteroApiClient", "Received " + collections.size() + " collections");
-                
-                // Log each collection for debugging
-                for (ZoteroCollection collection : collections) {
-                    Log.d("ZoteroApiClient", "Collection: " + collection.getName() + 
-                          ", Key: " + collection.getKey() + 
-                          ", Parent: " + collection.getParentCollection());
-                }
-                
-                callback.onSuccess(collections);
-            } else {
-                Log.e("ZoteroApiClient", "Failed to fetch collections: " + response.code());
-                // Check for specific error codes
-                if (response.code() == 401) {
-                    callback.onError("Authentication failed. Check your API key and user ID.");
-                } else if (response.code() == 403) {
-                    callback.onError("Access forbidden. Check your API permissions.");
-                } else if (response.code() == 404) {
-                    callback.onError("User not found. Check your user ID.");
-                } else {
-                    callback.onError("Failed to fetch collections: HTTP " + response.code());
-                }
+    public void getCollections(String userId, String apiKey, ZoteroCallback<List<ZoteroCollection>> callback) {
+        executor.execute(() -> {
+            // Check input parameters
+            Log.d(TAG, "Getting collections - UserId: '" + userId + "', API Key: '" + 
+                  (apiKey != null ? apiKey.substring(0, 5) + "..." : "null") + "'");
+            
+            if (userId == null || userId.isEmpty()) {
+                Log.e(TAG, "User ID is empty or null!");
+                callback.onError("User ID is empty");
+                return;
             }
-        } catch (IOException e) {
-            Log.e("ZoteroApiClient", "API error", e);
-            callback.onError("Network error: " + e.getMessage());
-        }
-    });
-}
+            
+            if (apiKey == null || apiKey.isEmpty()) {
+                Log.e(TAG, "API Key is empty or null!");
+                callback.onError("API Key is empty");
+                return;
+            }
+            
+            Call<List<ZoteroCollection>> call = zoteroService.getCollections(userId, apiKey);
+            Log.d(TAG, "API Request URL: " + call.request().url());
+
+            try {
+                Response<List<ZoteroCollection>> response = call.execute();
+                Log.d(TAG, "API Response Code: " + response.code());
+                
+                if (response.isSuccessful()) {
+                    List<ZoteroCollection> collections = response.body();
+                    if (collections != null) {
+                        Log.d(TAG, "Received " + collections.size() + " collections");
+                        
+                        // Log each collection for debugging
+                        for (ZoteroCollection collection : collections) {
+                            Log.d(TAG, "Collection: " + collection.getName() + 
+                                  ", Key: " + collection.getKey() + 
+                                  ", Parent: " + collection.getParentCollection());
+                        }
+                        
+                        callback.onSuccess(collections);
+                    } else {
+                        Log.e(TAG, "Response body is null!");
+                        callback.onError("Received empty response from Zotero");
+                    }
+                } else {
+                    Log.e(TAG, "Failed to fetch collections: " + response.code());
+                    // Get error body if available
+                    String errorBody = "";
+                    if (response.errorBody() != null) {
+                        try {
+                            errorBody = response.errorBody().string();
+                            Log.e(TAG, "Error body: " + errorBody);
+                        } catch (IOException e) {
+                            Log.e(TAG, "Could not read error body", e);
+                        }
+                    }
+                    
+                    // Check for specific error codes
+                    if (response.code() == 401) {
+                        callback.onError("Authentication failed. Check your API key and user ID. " + errorBody);
+                    } else if (response.code() == 403) {
+                        callback.onError("Access forbidden. Check your API permissions. " + errorBody);
+                    } else if (response.code() == 404) {
+                        callback.onError("User not found. Check your user ID. " + errorBody);
+                    } else {
+                        callback.onError("Failed to fetch collections: HTTP " + response.code() + " " + errorBody);
+                    }
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "API error", e);
+                callback.onError("Network error: " + e.getMessage());
+            }
+        });
+    }
 
     public void getEpubItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
         executor.execute(() -> {
@@ -280,6 +315,3 @@ public void getCollections(String userId, String apiKey, ZoteroCallback<List<Zot
         }
     }
 }
-
-
-

@@ -1,6 +1,8 @@
 package com.example.zoteroepubcovers;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.RadioButton;
@@ -57,6 +59,28 @@ public class SettingsActivity extends AppCompatActivity {
         buttonSave.setOnClickListener(v -> savePreferences());
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Add a menu option for verifying credentials
+        menu.add(Menu.NONE, 1, Menu.NONE, "Verify Credentials")
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            onBackPressed();
+            return true;
+        } else if (item.getItemId() == 1) { // Verify Credentials option
+            // Launch the credential verification activity
+            Intent intent = new Intent(this, CredentialVerificationActivity.class);
+            startActivity(intent);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
     private void loadPreferences() {
         editZoteroUsername.setText(userPreferences.getZoteroUsername());
         editZoteroUserId.setText(userPreferences.getZoteroUserId());
@@ -108,14 +132,5 @@ public class SettingsActivity extends AppCompatActivity {
 
         Toast.makeText(this, R.string.settings_saved, Toast.LENGTH_SHORT).show();
         finish();
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
     }
 }

@@ -18,6 +18,15 @@ public class ZoteroCollection {
         
         @SerializedName("parentCollection")
         private String parentCollection;
+        
+        // For debugging - print all fields
+        @Override
+        public String toString() {
+            return "ZoteroCollectionData{" +
+                    "name='" + name + '\'' +
+                    ", parentCollection='" + parentCollection + '\'' +
+                    '}';
+        }
     }
     
     public String getKey() {
@@ -47,7 +56,9 @@ public class ZoteroCollection {
     
     @Override
     public String toString() {
-        return "ZoteroCollection{key='" + key + "', name='" + getName() + 
-               "', parent='" + getParentCollection() + "'}";
+        return "ZoteroCollection{" +
+               "key='" + key + "', " +
+               "data=" + (data != null ? data.toString() : "null") +
+               '}';
     }
 }
