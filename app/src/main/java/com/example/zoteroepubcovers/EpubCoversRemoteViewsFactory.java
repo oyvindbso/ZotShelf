@@ -162,6 +162,22 @@ public class EpubCoversRemoteViewsFactory implements RemoteViewsService.RemoteVi
             views.setImageViewResource(R.id.imageWidgetCover, R.drawable.placeholder_cover);
         }
 
+        // Set the text according to display mode preference
+        int displayMode = userPreferences.getDisplayMode();
+        String displayText;
+
+        if (displayMode == UserPreferences.DISPLAY_AUTHOR_ONLY) {
+            displayText = item.getAuthors();
+        } else if (displayMode == UserPreferences.DISPLAY_AUTHOR_TITLE) {
+            displayText = item.getAuthors() + " - " + item.getTitle();
+        } else {
+            // Default to title only
+            displayText = item.getTitle();
+        }
+
+        // Set the text to the widget item
+        views.setTextViewText(R.id.widgetItemTitle, displayText);
+
         // Set fill-in intent for each item
         Bundle extras = new Bundle();
         extras.putString("itemId", item.getId());
@@ -192,27 +208,4 @@ public class EpubCoversRemoteViewsFactory implements RemoteViewsService.RemoteVi
     public boolean hasStableIds() {
         return true;
     }
-
-// Set the text according to display mode preference
-int displayMode = userPreferences.getDisplayMode();
-String displayText;
-
-switch (displayMode) {
-    case UserPreferences.DISPLAY_AUTHOR_ONLY:
-        displayText = item.getAuthors();
-        break;
-    case UserPreferences.DISPLAY_AUTHOR_TITLE:
-        displayText = item.getAuthors() + " - " + item.getTitle();
-        break;
-    case UserPreferences.DISPLAY_TITLE_ONLY:
-    default:
-        displayText = item.getTitle();
-        break;
 }
-
-// Set the text to the widget item
-views.setTextViewText(R.id.widgetItemTitle, displayText);
-
-
-}
-
