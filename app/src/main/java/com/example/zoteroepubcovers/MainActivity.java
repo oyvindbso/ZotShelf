@@ -183,17 +183,20 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         loadCoversFromApi();
     }
     
+    // Update the loadCoversFromApi method in MainActivity.java
+
     private void loadCoversFromApi() {
         String userId = userPreferences.getZoteroUserId();
         String apiKey = userPreferences.getZoteroApiKey();
         String collectionKey = userPreferences.getSelectedCollectionKey();
-    
-        zoteroApiClient.getEpubItemsByCollection(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
+
+        // Use the new method that fetches parent metadata
+        zoteroApiClient.getEpubItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
             @Override
             public void onSuccess(List<ZoteroItem> zoteroItems) {
                 processZoteroItems(zoteroItems);
             }
-    
+
             @Override
             public void onError(String errorMessage) {
                 runOnUiThread(() -> {

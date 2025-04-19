@@ -97,6 +97,13 @@ public class ZoteroApiClient {
         @GET
         @Streaming
         Call<ResponseBody> downloadFile(@Url String fileUrl, @Header("Zotero-API-Key") String apiKey);
+        
+        @GET("users/{userId}/items/{itemKey}")
+        Call<ZoteroItem> getItemByKey(
+        @Path("userId") String userId,
+        @Path("itemKey") String itemKey,
+        @Header("Zotero-API-Key") String apiKey
+        )
     }
 
     public interface ZoteroCallback<T> {
@@ -313,5 +320,100 @@ public class ZoteroApiClient {
             Log.e(TAG, "File write error", e);
             return false;
         }
+    }
+
+    
+    public void getParentItem(String userId, String apiKey, String parentItemKey, ZoteroCallback<ZoteroItem> callback) {
+    if (parentItemKey == null || parentItemKey.isEmpty()) {
+        callback.onError("Parent item key is null or empty");
+        return;
+    }
+    
+    executor.execute(() -> {
+        Call<ZoteroItem> call = zoteroService.getItemByKey(userId, parentItemKey, apiKey);
+        
+        try {
+            Response<ZoteroItem> response = call.execute();
+            if (response.isSuccessful() && response.body() != null) {
+                callback.onSuccess(response.body());
+            } else {
+                callback.onError("Failed to fetch parent item: " + response.code());
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "API error", e);
+            callback.onError("Network error: " + e.getMessage());
+        }
+    });
+    }
+    public void getEpubItemsWithMetadata(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+    // First get all EPUB items
+    ZoteroCallback<List<ZoteroItem>> epubCallback = new ZoteroCallback<List<ZoteroItem>>() {
+        @Override
+        public void onSuccess(List<ZoteroItem> epubItems) {
+            if (epubItems.isEmpty()) {
+                callback.onSuccess(epubItems); // No items to process
+                return;
+            }
+            
+            // For each EPUB item, fetch its parent item if it has one
+            final List<ZoteroItem> processedItems = new ArrayList<>();
+            final int[] itemsToProcess = {epubItems.size()};
+            
+            for (ZoteroItem epubItem : epubItems) {
+                String parentKey = epubItem.getParentItemKey();
+                
+                if (parentKey != null && !parentKey.isEmpty()) {
+                    // Fetch parent item metadata
+                    getParentItem(userId, apiKey, parentKey, new ZoteroCallback<ZoteroItem>() {
+                        @Override
+                        public void onSuccess(ZoteroItem parentItem) {
+                            epubItem.setParentItem(parentItem);
+                            processedItems.add(epubItem);
+                            
+                            // Check if all items are processed
+                            itemsToProcess[0]--;
+                            if (itemsToProcess[0] == 0) {
+                                callback.onSuccess(processedItems);
+                            }
+                        }
+                        
+                        @Override
+                        public void onError(String errorMessage) {
+                            Log.e(TAG, "Error fetching parent item: " + errorMessage);
+                            // Still add the item even without parent metadata
+                            processedItems.add(epubItem);
+                            
+                            // Check if all items are processed
+                            itemsToProcess[0]--;
+                            if (itemsToProcess[0] == 0) {
+                                callback.onSuccess(processedItems);
+                            }
+                        }
+                    });
+                } else {
+                    // No parent item, just add as is
+                    processedItems.add(epubItem);
+                    
+                    // Check if all items are processed
+                    itemsToProcess[0]--;
+                    if (itemsToProcess[0] == 0) {
+                        callback.onSuccess(processedItems);
+                    }
+                }
+            }
+        }
+        
+        @Override
+        public void onError(String errorMessage) {
+            callback.onError(errorMessage);
+        }
+    };
+    
+    // Get EPUB items first
+    if (collectionKey == null || collectionKey.isEmpty()) {
+        getEpubItems(userId, apiKey, epubCallback);
+    } else {
+        getEpubItemsByCollection(userId, apiKey, collectionKey, epubCallback);
+    }
     }
 }
