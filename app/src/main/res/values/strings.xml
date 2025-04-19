@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Zotero EPUB Covers</string>
+    <string name="app_name">ZotShelf</string>
     <string name="title_activity_settings">Settings</string>
     <string name="no_epubs_found">No EPUB files found in your Zotero library</string>
     <string name="error_loading">Error loading EPUBs</string>
@@ -10,9 +10,9 @@
     <string name="credentials">To use this app, you need to enter your Zotero credentials in the Settings.</string>
     <string name="features">Features:</string>
     <string name="feature_list">• View all your EPUB books at a glance\n• Tap any cover to open the book in your Zotero Web Library\n• Pull down to refresh your collection</string>
-    <string name="who">This app was developed by Øyvind Solheim (@Oyvindbs@nerdculture.de) with a lot of help from the Claude AI. See the code or propose changes on https://www.github.com/oyvindbso/zoteview</string>
-    <string name="coffee">Enjoy ZotEView? Buy me a coffee: https://buymeacoffee.com/oyvindbs or propose new features/code on gihub (above).</string>
-    <string name="app_description">Zotero EPUB Covers displays all your EPUB books from your Zotero library in a convenient grid view.</string>
+    <string name="who">This app was developed by Øyvind Solheim (@Oyvindbs@nerdculture.de) with a lot of help from the Claude AI. See the code or propose changes on https://www.github.com/oyvindbso/zotshelf</string>
+    <string name="coffee">Enjoy ZotShelf? Buy me a coffee: https://buymeacoffee.com/oyvindbs or propose new features/code on gihub (above).</string>
+    <string name="app_description">ZotShelf displays your EPUB book covers from your Zotero library in a convenient shelf.</string>
 
     <!--Collections-->
     <string name="title_select_collection">Select Collection</string>
