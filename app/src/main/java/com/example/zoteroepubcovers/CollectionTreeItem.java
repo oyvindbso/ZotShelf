@@ -1,4 +1,4 @@
-package com.example.zoteroepubcovers;
+package com.example.zotshelf;
 
 /**
  * Represents an item in the collection tree display

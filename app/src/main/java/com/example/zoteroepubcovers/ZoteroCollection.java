@@ -1,4 +1,4 @@
-package com.example.zoteroepubcovers;
+package com.example.zotshelf;
 
 import android.util.Log;
 import com.google.gson.annotations.SerializedName;

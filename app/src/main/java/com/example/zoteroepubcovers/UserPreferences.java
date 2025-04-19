@@ -1,4 +1,4 @@
-package com.example.zoteroepubcovers;
+package com.example.zotshelf;
 
 import android.content.Context;
 import android.content.SharedPreferences;

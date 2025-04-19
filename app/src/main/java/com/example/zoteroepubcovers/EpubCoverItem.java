@@ -1,4 +1,4 @@
-package com.example.zoteroepubcovers;
+package com.example.zotshelf;
 
 public class EpubCoverItem {
     private final String id;

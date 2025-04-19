@@ -1,4 +1,4 @@
-package com.example.zoteroepubcovers;
+package com.example.zotshelf;
 
 import android.content.Intent;
 import android.net.Uri;
