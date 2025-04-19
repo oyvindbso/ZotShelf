@@ -1,4 +1,4 @@
-package com.example.zotshelf.database;
+package oyvindbs.zotshelf.database;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;

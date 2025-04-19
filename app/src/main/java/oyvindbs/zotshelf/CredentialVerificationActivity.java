@@ -1,4 +1,4 @@
-package com.example.zotshelf;
+package oyvindbs.zotshelf;
 
 import android.os.Bundle;
 import android.util.Log;

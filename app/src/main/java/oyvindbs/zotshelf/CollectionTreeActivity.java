@@ -1,4 +1,4 @@
-package com.example.zotshelf;
+package oyvindbs.zotshelf;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -15,7 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.zotshelf.utils.NetworkUtils;
+import oyvindbs.zotshelf.utils.NetworkUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;

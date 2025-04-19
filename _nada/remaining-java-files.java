@@ -1,5 +1,5 @@
 // Complete UserPreferences.java file
-package com.example.zotshelf;
+package oyvindbs.zotshelf;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -57,7 +57,7 @@ public class UserPreferences {
 }
 
 // SettingsActivity.java
-package com.example.zotshelf;
+package oyvindbs.zotshelf;
 
 import android.os.Bundle;
 import android.view.MenuItem;

@@ -1,4 +1,4 @@
-package com.example.zotshelf;
+package oyvindbs.zotshelf;
 
 /**
  * Represents an item in the collection tree display

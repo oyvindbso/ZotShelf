@@ -1,4 +1,4 @@
-package com.example.zotshelf;
+package oyvindbs.zotshelf;
 
 import android.content.Intent;
 import android.net.Uri;
@@ -18,8 +18,8 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.example.zotshelf.database.EpubCoverRepository;
-import com.example.zotshelf.utils.NetworkUtils;
+import oyvindbs.zotshelf.database.EpubCoverRepository;
+import oyvindbs.zotshelf.utils.NetworkUtils;
 
 import java.util.ArrayList;
 import java.util.List;

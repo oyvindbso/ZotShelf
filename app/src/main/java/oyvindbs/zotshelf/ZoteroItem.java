@@ -1,4 +1,4 @@
-package com.example.zotshelf;
+package oyvindbs.zotshelf;
 
 import com.google.gson.annotations.SerializedName;
 

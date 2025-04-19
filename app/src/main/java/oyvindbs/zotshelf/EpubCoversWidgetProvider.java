@@ -1,4 +1,4 @@
-package com.example.zotshelf;
+package oyvindbs.zotshelf;
 
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;

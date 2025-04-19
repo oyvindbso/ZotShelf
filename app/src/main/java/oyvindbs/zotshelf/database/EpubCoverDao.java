@@ -1,4 +1,4 @@
-package com.example.zotshelf.database;
+package oyvindbs.zotshelf.database;
 
 import androidx.room.Dao;
 import androidx.room.Insert;

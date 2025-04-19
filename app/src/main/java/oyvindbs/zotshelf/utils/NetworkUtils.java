@@ -1,4 +1,4 @@
-package com.example.zotshelf.utils;
+package oyvindbs.zotshelf.utils;
 
 import android.content.Context;
 import android.net.ConnectivityManager;

@@ -1,10 +1,10 @@
-package com.example.zotshelf.database;
+package oyvindbs.zotshelf.database;
 
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.example.zotshelf.EpubCoverItem;
+import oyvindbs.zotshelf.EpubCoverItem;
 
 import java.util.ArrayList;
 import java.util.List;
