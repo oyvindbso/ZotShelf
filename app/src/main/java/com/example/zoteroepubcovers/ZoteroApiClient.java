@@ -103,7 +103,7 @@ public class ZoteroApiClient {
         @Path("userId") String userId,
         @Path("itemKey") String itemKey,
         @Header("Zotero-API-Key") String apiKey
-        )
+        );
     }
 
     public interface ZoteroCallback<T> {
