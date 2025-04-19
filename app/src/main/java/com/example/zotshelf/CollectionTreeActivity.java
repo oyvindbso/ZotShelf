@@ -15,7 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.zoteroepubcovers.utils.NetworkUtils;
+import com.example.zotshelf.utils.NetworkUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;

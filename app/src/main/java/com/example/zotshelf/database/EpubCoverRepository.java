@@ -1,4 +1,4 @@
-package com.example.zoteroepubcovers.database;
+package com.example.zotshelf.database;
 
 import android.content.Context;
 import android.os.Handler;

@@ -1,4 +1,4 @@
-package com.example.zoteroepubcovers.utils;
+package com.example.zotshelf.utils;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
