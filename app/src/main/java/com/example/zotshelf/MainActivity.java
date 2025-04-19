@@ -18,8 +18,8 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.example.zoteroepubcovers.database.EpubCoverRepository;
-import com.example.zoteroepubcovers.utils.NetworkUtils;
+import com.example.zotshelf.database.EpubCoverRepository;
+import com.example.zotshelf.utils.NetworkUtils;
 
 import java.util.ArrayList;
 import java.util.List;

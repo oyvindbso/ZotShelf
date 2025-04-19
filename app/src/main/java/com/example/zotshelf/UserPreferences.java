@@ -5,7 +5,7 @@ import android.content.SharedPreferences;
 
 public class UserPreferences {
     
-    private static final String PREF_NAME = "ZoteroEpubCoversPrefs";
+    private static final String PREF_NAME = "zotshelfPrefs";
     private static final String KEY_ZOTERO_USER_ID = "zotero_user_id";
     private static final String KEY_ZOTERO_API_KEY = "zotero_api_key";
     private static final String KEY_ZOTERO_USERNAME = "zotero_username";

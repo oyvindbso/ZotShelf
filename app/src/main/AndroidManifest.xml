@@ -10,7 +10,7 @@
         android:allowBackup="true"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ZoteroEpubCovers">
+        android:theme="@style/Theme.zotshelf">
         
         <!-- Remove the android:icon and android:roundIcon attributes -->
         

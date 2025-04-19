@@ -4,7 +4,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.example.zoteroepubcovers.EpubCoverItem;
+import com.example.zotshelf.EpubCoverItem;
 
 import java.util.ArrayList;
 import java.util.List;
