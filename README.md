@@ -1,6 +1,6 @@
 # ZotShelf: Your Digital Bookshelf for Zotero 
 
-ZotShelf extracts covers from the EPUBs in your Zotero library and displays them in a beautiful, browsable grid. Quickly see your entire digital book collection at a glance and access your books with a single tap.
+ZotShelf extracts covers from the EPUBs in your [Zotero](www.zotero.com) library and displays them in a beautiful, browsable grid. Quickly see your entire digital book collection at a glance and access your books with a single tap.
 
 The app is currently in closed beta testing. Contact me if you would like to test it at appbugge@gmail.com. There are some bugs with choosing collections. THe app does not show all the collections in the account.
 
