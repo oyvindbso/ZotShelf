@@ -183,123 +183,123 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         loadCoversFromApi();
     }
     
-    // Update the loadCoversFromApi method in MainActivity.java
 
-    private void loadCoversFromApi() {
-        String userId = userPreferences.getZoteroUserId();
-        String apiKey = userPreferences.getZoteroApiKey();
-        String collectionKey = userPreferences.getSelectedCollectionKey();
+private void loadCoversFromApi() {
+    String userId = userPreferences.getZoteroUserId();
+    String apiKey = userPreferences.getZoteroApiKey();
+    String collectionKey = userPreferences.getSelectedCollectionKey();
 
-        // Use the new method that fetches parent metadata
-        zoteroApiClient.getEpubItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
-            @Override
-            public void onSuccess(List<ZoteroItem> zoteroItems) {
-                processZoteroItems(zoteroItems);
-            }
+    // Use the new method that fetches both EPUB and PDF items with metadata
+    zoteroApiClient.getEbookItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
+        @Override
+        public void onSuccess(List<ZoteroItem> zoteroItems) {
+            processZoteroItems(zoteroItems);
+        }
 
-            @Override
-            public void onError(String errorMessage) {
-                runOnUiThread(() -> {
-                    // If API fails but we have cached data, show that
-                    coverRepository.hasCachedCovers(hasCovers -> {
-                        if (hasCovers) {
-                            loadCachedCovers();
-                            Toast.makeText(MainActivity.this, 
-                                    "Failed to update from Zotero: " + errorMessage, 
-                                    Toast.LENGTH_LONG).show();
-                        } else {
-                            showEmptyState("Error: " + errorMessage);
-                            swipeRefreshLayout.setRefreshing(false);
-                        }
-                    });
+        @Override
+        public void onError(String errorMessage) {
+            runOnUiThread(() -> {
+                // If API fails but we have cached data, show that
+                coverRepository.hasCachedCovers(hasCovers -> {
+                    if (hasCovers) {
+                        loadCachedCovers();
+                        Toast.makeText(MainActivity.this, 
+                                "Failed to update from Zotero: " + errorMessage, 
+                                Toast.LENGTH_LONG).show();
+                    } else {
+                        showEmptyState("Error: " + errorMessage);
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
                 });
-            }
-        });
+            });
+        }
+    });
     }
 
     private void processZoteroItems(List<ZoteroItem> zoteroItems) {
-        if (zoteroItems.isEmpty()) {
-            runOnUiThread(() -> {
-                showEmptyState("No EPUB files found in your Zotero library");
-                swipeRefreshLayout.setRefreshing(false);
-            });
-            return;
-        }
+    if (zoteroItems.isEmpty()) {
+        runOnUiThread(() -> {
+            showEmptyState("No EPUB or PDF files found in your Zotero library");
+            swipeRefreshLayout.setRefreshing(false);
+        });
+        return;
+    }
 
-        // Process each Zotero item that has EPUBs
-        List<EpubCoverItem> newCoverItems = new ArrayList<>();
-        
-        for (ZoteroItem item : zoteroItems) {
-            zoteroApiClient.downloadEpub(item, new ZoteroApiClient.FileCallback() {
-                @Override
-                public void onFileDownloaded(ZoteroItem item, String filePath) {
-                    // Extract cover from the EPUB
-                    EpubCoverExtractor.extractCover(filePath, new EpubCoverExtractor.CoverCallback() {
-                        @Override
-                        public void onCoverExtracted(String coverPath) {
-                            EpubCoverItem coverItem = new EpubCoverItem(
-                                    item.getKey(),
-                                    item.getTitle(),
-                                    coverPath,
-                                    item.getAuthors(),
-                                    userPreferences.getZoteroUsername()
-                            );
-                            
-                            newCoverItems.add(coverItem);
-                            
-                            // Update UI when all items are processed
-                            if (newCoverItems.size() == zoteroItems.size()) {
-                                // Save the covers to local database
-                                coverRepository.saveCovers(newCoverItems);
-                                updateUI(newCoverItems);
-                            }
+    // Process each Zotero item that has ebooks
+    List<EpubCoverItem> newCoverItems = new ArrayList<>();
+    
+    for (ZoteroItem item : zoteroItems) {
+        // Use the new downloadEbook method instead of downloadEpub
+        zoteroApiClient.downloadEbook(item, new ZoteroApiClient.FileCallback() {
+            @Override
+            public void onFileDownloaded(ZoteroItem item, String filePath) {
+                // Extract cover from the ebook file using the new universal extractor
+                CoverExtractor.extractCover(filePath, new CoverExtractor.CoverCallback() {
+                    @Override
+                    public void onCoverExtracted(String coverPath) {
+                        EpubCoverItem coverItem = new EpubCoverItem(
+                                item.getKey(),
+                                item.getTitle(),
+                                coverPath,
+                                item.getAuthors(),
+                                userPreferences.getZoteroUsername()
+                        );
+                        
+                        newCoverItems.add(coverItem);
+                        
+                        // Update UI when all items are processed
+                        if (newCoverItems.size() == zoteroItems.size()) {
+                            // Save the covers to local database
+                            coverRepository.saveCovers(newCoverItems);
+                            updateUI(newCoverItems);
                         }
-
-                        @Override
-                        public void onError(String errorMessage) {
-                            // If cover extraction fails, still add the item but with a placeholder
-                            EpubCoverItem coverItem = new EpubCoverItem(
-                                    item.getKey(),
-                                    item.getTitle(),
-                                    null, // null cover path will show placeholder
-                                    item.getAuthors(),
-                                    userPreferences.getZoteroUsername()
-                            );
-                            
-                            newCoverItems.add(coverItem);
-                            
-                            // Update UI when all items are processed
-                            if (newCoverItems.size() == zoteroItems.size()) {
-                                // Save the covers to local database
-                                coverRepository.saveCovers(newCoverItems);
-                                updateUI(newCoverItems);
-                            }
-                        }
-                    });
-                }
-                
-                @Override
-                public void onError(ZoteroItem item, String errorMessage) {
-                    // If download fails, still add the item but with error info and placeholder
-                    EpubCoverItem coverItem = new EpubCoverItem(
-                            item.getKey(),
-                            item.getTitle() + " (Download failed)",
-                            null, // null cover path will show placeholder
-                            item.getAuthors(),
-                            userPreferences.getZoteroUsername()
-                    );
-                    
-                    newCoverItems.add(coverItem);
-                    
-                    // Update UI when all items are processed
-                    if (newCoverItems.size() == zoteroItems.size()) {
-                        // Save the covers to local database
-                        coverRepository.saveCovers(newCoverItems);
-                        updateUI(newCoverItems);
                     }
+
+                    @Override
+                    public void onError(String errorMessage) {
+                        // If cover extraction fails, still add the item but with a placeholder
+                        EpubCoverItem coverItem = new EpubCoverItem(
+                                item.getKey(),
+                                item.getTitle(),
+                                null, // null cover path will show placeholder
+                                item.getAuthors(),
+                                userPreferences.getZoteroUsername()
+                        );
+                        
+                        newCoverItems.add(coverItem);
+                        
+                        // Update UI when all items are processed
+                        if (newCoverItems.size() == zoteroItems.size()) {
+                            // Save the covers to local database
+                            coverRepository.saveCovers(newCoverItems);
+                            updateUI(newCoverItems);
+                        }
+                    }
+                });
+            }
+            
+            @Override
+            public void onError(ZoteroItem item, String errorMessage) {
+                // If download fails, still add the item but with error info and placeholder
+                EpubCoverItem coverItem = new EpubCoverItem(
+                        item.getKey(),
+                        item.getTitle() + " (Download failed)",
+                        null, // null cover path will show placeholder
+                        item.getAuthors(),
+                        userPreferences.getZoteroUsername()
+                );
+                
+                newCoverItems.add(coverItem);
+                
+                // Update UI when all items are processed
+                if (newCoverItems.size() == zoteroItems.size()) {
+                    // Save the covers to local database
+                    coverRepository.saveCovers(newCoverItems);
+                    updateUI(newCoverItems);
                 }
-            });
-        }
+            }
+        });
+    }
     }
 
 private void updateUI(final List<EpubCoverItem> newItems) {

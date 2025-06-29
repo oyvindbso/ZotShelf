@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace 'oyvindbs.zotshelf'
+    namespace 'com.example.zotshelf'
 
     testOptions {
     unitTests.all {
@@ -13,7 +13,7 @@ android {
     compileSdk 35
     
     defaultConfig {
-        applicationId "oyvindbs.zotshelf"
+        applicationId "com.example.zotshelf"
         minSdk 23
         targetSdk 34
         versionCode 1
@@ -63,6 +63,9 @@ dependencies {
     // Epublib for EPUB parsing
     implementation 'com.github.mertakdut:EpubParser:1.0.95' 
     implementation 'org.slf4j:slf4j-android:1.7.36'    
+    
+    // PDF processing - Android's built-in PDF renderer
+    implementation 'androidx.pdf:pdf:1.0.0-alpha02'
     
     // Room for caching
     implementation 'androidx.room:room-runtime:2.6.1'

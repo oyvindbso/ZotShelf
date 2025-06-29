@@ -97,39 +97,41 @@ public class CredentialVerificationActivity extends AppCompatActivity {
     }
     
     private void testItemsApi() {
-        String userId = userPreferences.getZoteroUserId();
-        String apiKey = userPreferences.getZoteroApiKey();
-        
-        appendToStatus("\nTesting Items API...");
-        
-        zoteroApiClient.getEpubItems(userId, apiKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
-            @Override
-            public void onSuccess(List<ZoteroItem> items) {
-                StringBuilder sb = new StringBuilder();
-                sb.append("✓ Items API Success: Found " + items.size() + " EPUB items.\n");
-                
-                if (!items.isEmpty()) {
-                    sb.append("\nEPUB Examples:\n");
-                    int count = Math.min(items.size(), 3);
-                    for (int i = 0; i < count; i++) {
-                        ZoteroItem item = items.get(i);
-                        sb.append("- ").append(item.getTitle())
-                          .append(" (Key: ").append(item.getKey()).append(")\n");
-                    }
+    String userId = userPreferences.getZoteroUserId();
+    String apiKey = userPreferences.getZoteroApiKey();
+    
+    appendToStatus("\nTesting Items API...");
+    
+    zoteroApiClient.getEbookItems(userId, apiKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
+        @Override
+        public void onSuccess(List<ZoteroItem> items) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("✓ Items API Success: Found " + items.size() + " ebook items (EPUB + PDF).\n");
+            
+            if (!items.isEmpty()) {
+                sb.append("\nEbook Examples:\n");
+                int count = Math.min(items.size(), 3);
+                for (int i = 0; i < count; i++) {
+                    ZoteroItem item = items.get(i);
+                    String fileType = item.getMimeType().equals("application/epub+zip") ? "EPUB" : "PDF";
+                    sb.append("- ").append(item.getTitle())
+                      .append(" (").append(fileType).append(")")
+                      .append(" (Key: ").append(item.getKey()).append(")\n");
                 }
-                
-                appendToStatus(sb.toString());
-                hideLoading();
             }
             
-            @Override
-            public void onError(String errorMessage) {
-                String error = "✗ Items API Failed: " + errorMessage;
-                appendToStatus(error);
-                hideLoading();
-            }
-        });
-    }
+            appendToStatus(sb.toString());
+            hideLoading();
+        }
+        
+        @Override
+        public void onError(String errorMessage) {
+            String error = "✗ Items API Failed: " + errorMessage;
+            appendToStatus(error);
+            hideLoading();
+        }
+    });
+||||}
     
     private void appendToStatus(String text) {
         runOnUiThread(() -> {
