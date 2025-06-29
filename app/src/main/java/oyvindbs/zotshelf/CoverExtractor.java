@@ -1,5 +1,6 @@
 package oyvindbs.zotshelf;
 
+
 import android.graphics.Bitmap;
 import android.graphics.pdf.PdfRenderer;
 import android.os.ParcelFileDescriptor;
