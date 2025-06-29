@@ -11,19 +11,9 @@ public void getEbookItems(String userId, String apiKey, ZoteroCallback<List<Zote
             Response<List<ZoteroItem>> response = call.execute();
             if (response.isSuccessful() && response.body() != null) {
                 List<ZoteroItem> allItems = response.body();
-                List<ZoteroItem> ebookItems = new ArrayList<>();
+                List<ZoteroItem> filteredItems = filterItemsByUserPreferences(allItems);
                 
-                // Filter to EPUB and PDF attachments
-                for (ZoteroItem item : allItems) {
-                    String mimeType = item.getMimeType();
-                    if (mimeType != null && 
-                        (mimeType.equals("application/epub+zip") || 
-                         mimeType.equals("application/pdf"))) {
-                        ebookItems.add(item);
-                    }
-                }
-                
-                callback.onSuccess(ebookItems);
+                callback.onSuccess(filteredItems);
             } else {
                 callback.onError("Failed to fetch items: " + response.code());
             }
@@ -35,8 +25,8 @@ public void getEbookItems(String userId, String apiKey, ZoteroCallback<List<Zote
 }
 
 /**
- * Get both EPUB and PDF items by collection
- */
+ * Get ebook items by collection, filtered by user preferences
+ *  */
 public void getEbookItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
     executor.execute(() -> {
         // If no collection selected, get all items
@@ -51,19 +41,9 @@ public void getEbookItemsByCollection(String userId, String apiKey, String colle
             Response<List<ZoteroItem>> response = call.execute();
             if (response.isSuccessful() && response.body() != null) {
                 List<ZoteroItem> allItems = response.body();
-                List<ZoteroItem> ebookItems = new ArrayList<>();
+                List<ZoteroItem> filteredItems = filterItemsByUserPreferences(allItems);
 
-                // Filter to EPUB and PDF attachments
-                for (ZoteroItem item : allItems) {
-                    String mimeType = item.getMimeType();
-                    if (mimeType != null && 
-                        (mimeType.equals("application/epub+zip") || 
-                         mimeType.equals("application/pdf"))) {
-                        ebookItems.add(item);
-                    }
-                }
-
-                callback.onSuccess(ebookItems);
+                callback.onSuccess(filteredItems);
             } else {
                 callback.onError("Failed to fetch items: " + response.code());
             }
@@ -72,6 +52,39 @@ public void getEbookItemsByCollection(String userId, String apiKey, String colle
             callback.onError("Network error: " + e.getMessage());
         }
     });
+}
+
+
+/**
+ * Filter items based on user preferences for file types
+ */
+private List<ZoteroItem> filterItemsByUserPreferences(List<ZoteroItem> allItems) {
+    UserPreferences prefs = new UserPreferences(context);
+    boolean showEpubs = prefs.getShowEpubs();
+    boolean showPdfs = prefs.getShowPdfs();
+    
+    List<ZoteroItem> filteredItems = new ArrayList<>();
+    
+    for (ZoteroItem item : allItems) {
+        String mimeType = item.getMimeType();
+        if (mimeType != null) {
+            if (mimeType.equals("application/epub+zip") && showEpubs) {
+                filteredItems.add(item);
+            } else if (mimeType.equals("application/pdf") && showPdfs) {
+                filteredItems.add(item);
+            }
+        }
+    }
+    
+    return filteredItems;
+}
+
+/**
+ * Check if the user has any file types enabled
+ */
+public boolean hasEnabledFileTypes() {
+    UserPreferences prefs = new UserPreferences(context);
+    return prefs.hasAnyFileTypeEnabled();
 }
 
 /**

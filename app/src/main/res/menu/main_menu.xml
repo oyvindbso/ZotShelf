@@ -25,6 +25,24 @@
         android:icon="@drawable/ic_collections"
         android:title="Select Collection"
         app:showAsAction="ifRoom" />
+    
+    <!-- File Type Toggle -->
+    <item
+        android:id="@+id/action_file_types"
+        android:title="File Types"
+        app:showAsAction="never">
+        <menu>
+            <item
+                android:id="@+id/action_toggle_epubs"
+                android:title="Toggle EPUBs"
+                android:checkable="true" />
+            <item
+                android:id="@+id/action_toggle_pdfs"
+                android:title="Toggle PDFs"
+                android:checkable="true" />
+        </menu>
+    </item>
+    
  <!--information button -->
     <item
         android:id="@+id/action_info"

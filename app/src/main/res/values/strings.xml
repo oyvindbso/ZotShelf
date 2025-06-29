@@ -31,4 +31,12 @@
     <string name="book_info_display">Book information to display:</string>
     <string name="change_display_mode">Change Display Mode</string>
     <string name="cancel">Cancel</string>
+    
+    <!-- File type settings -->
+    <string name="file_type_settings">File Type Settings</string>
+    <string name="select_file_types">Select which file types to display:</string>
+    <string name="show_epubs">Show EPUB files</string>
+    <string name="show_pdfs">Show PDF files</string>
+    <string name="no_file_types_enabled">Please enable at least one file type (EPUB or PDF) in settings</string>
+    <string name="at_least_one_file_type">Please select at least one file type to display</string>
 </resources>

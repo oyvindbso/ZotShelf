@@ -96,17 +96,38 @@ public class CredentialVerificationActivity extends AppCompatActivity {
         });
     }
     
-    private void testItemsApi() {
+    // Replace the testItemsApi method in CredentialVerificationActivity.java:
+
+private void testItemsApi() {
     String userId = userPreferences.getZoteroUserId();
     String apiKey = userPreferences.getZoteroApiKey();
     
     appendToStatus("\nTesting Items API...");
     
+    // Check what file types are enabled
+    boolean showEpubs = userPreferences.getShowEpubs();
+    boolean showPdfs = userPreferences.getShowPdfs();
+    
+    StringBuilder enabledTypes = new StringBuilder();
+    if (showEpubs && showPdfs) {
+        enabledTypes.append("EPUB and PDF files");
+    } else if (showEpubs) {
+        enabledTypes.append("EPUB files only");
+    } else if (showPdfs) {
+        enabledTypes.append("PDF files only");
+    } else {
+        appendToStatus("⚠ No file types are enabled in settings!");
+        hideLoading();
+        return;
+    }
+    
+    appendToStatus("Enabled file types: " + enabledTypes.toString());
+    
     zoteroApiClient.getEbookItems(userId, apiKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
         @Override
         public void onSuccess(List<ZoteroItem> items) {
             StringBuilder sb = new StringBuilder();
-            sb.append("✓ Items API Success: Found " + items.size() + " ebook items (EPUB + PDF).\n");
+            sb.append("✓ Items API Success: Found " + items.size() + " ebook items matching your preferences.\n");
             
             if (!items.isEmpty()) {
                 sb.append("\nEbook Examples:\n");
@@ -118,6 +139,10 @@ public class CredentialVerificationActivity extends AppCompatActivity {
                       .append(" (").append(fileType).append(")")
                       .append(" (Key: ").append(item.getKey()).append(")\n");
                 }
+            } else {
+                sb.append("\nNo items found matching your file type preferences. ");
+                sb.append("You may need to adjust your file type settings or check if you have ");
+                sb.append(enabledTypes.toString()).append(" in your Zotero library.");
             }
             
             appendToStatus(sb.toString());
@@ -131,7 +156,7 @@ public class CredentialVerificationActivity extends AppCompatActivity {
             hideLoading();
         }
     });
-||||}
+    }
     
     private void appendToStatus(String text) {
         runOnUiThread(() -> {

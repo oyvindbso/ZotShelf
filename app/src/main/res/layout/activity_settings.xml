@@ -94,6 +94,38 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="8dp"
+                android:text="File Type Settings"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Select which file types to display:"
+                android:textSize="16sp" />
+
+            <CheckBox
+                android:id="@+id/checkBoxShowEpubs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Show EPUB files"
+                android:textSize="16sp" />
+
+            <CheckBox
+                android:id="@+id/checkBoxShowPdfs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Show PDF files"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
                 android:text="Display Settings"
                 android:textSize="20sp"
                 android:textStyle="bold" />

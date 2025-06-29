@@ -32,10 +32,18 @@ public class EpubCoversRemoteViewsFactory implements RemoteViewsService.RemoteVi
         // Initialize the data set
     }
 
-    @Override
-    public void onDataSetChanged() {
+    // Replace the onDataSetChanged method in EpubCoversRemoteViewsFactory.java:
+
+@Override
+public void onDataSetChanged() {
     // Load data from Zotero API
     if (!userPreferences.hasZoteroCredentials()) {
+        coverItems.clear();
+        return;
+    }
+    
+    // Check if user has any file types enabled
+    if (!userPreferences.hasAnyFileTypeEnabled()) {
         coverItems.clear();
         return;
     }
@@ -49,7 +57,7 @@ public class EpubCoversRemoteViewsFactory implements RemoteViewsService.RemoteVi
     
     coverItems.clear();
 
-    // Use the new getEbookItemsByCollection method instead
+    // Use the updated getEbookItemsByCollection method that respects preferences
     zoteroApiClient.getEbookItemsByCollection(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
         @Override
         public void onSuccess(List<ZoteroItem> zoteroItems) {
