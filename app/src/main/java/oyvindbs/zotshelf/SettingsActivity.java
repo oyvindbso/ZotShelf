@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
@@ -20,6 +21,9 @@ public class SettingsActivity extends AppCompatActivity {
     private TextInputEditText editZoteroUsername;
     private TextInputEditText editZoteroUserId;
     private TextInputEditText editZoteroApiKey;
+    private CheckBox checkBoxShowEpubs;
+    private CheckBox checkBoxShowPdfs;
+    private CheckBox checkBoxBooksOnly;
     private RadioGroup radioGroupDisplayMode;
     private RadioButton radioTitleOnly;
     private RadioButton radioAuthorOnly;
@@ -43,6 +47,9 @@ public class SettingsActivity extends AppCompatActivity {
         editZoteroUsername = findViewById(R.id.editZoteroUsername);
         editZoteroUserId = findViewById(R.id.editZoteroUserId);
         editZoteroApiKey = findViewById(R.id.editZoteroApiKey);
+        checkBoxShowEpubs = findViewById(R.id.checkBoxShowEpubs);
+        checkBoxShowPdfs = findViewById(R.id.checkBoxShowPdfs);
+        checkBoxBooksOnly = findViewById(R.id.checkBoxBooksOnly);
         radioGroupDisplayMode = findViewById(R.id.radioGroupDisplayMode);
         radioTitleOnly = findViewById(R.id.radioTitleOnly);
         radioAuthorOnly = findViewById(R.id.radioAuthorOnly);
@@ -82,9 +89,15 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void loadPreferences() {
+        // Load Zotero credentials
         editZoteroUsername.setText(userPreferences.getZoteroUsername());
         editZoteroUserId.setText(userPreferences.getZoteroUserId());
         editZoteroApiKey.setText(userPreferences.getZoteroApiKey());
+        
+        // Load file type preferences
+        checkBoxShowEpubs.setChecked(userPreferences.getShowEpubs());
+        checkBoxShowPdfs.setChecked(userPreferences.getShowPdfs());
+        checkBoxBooksOnly.setChecked(userPreferences.getBooksOnly());
         
         // Set the display mode radio button
         int displayMode = userPreferences.getDisplayMode();
@@ -112,11 +125,26 @@ public class SettingsActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
             return;
         }
+        
+        // Validate file type selection
+        boolean showEpubs = checkBoxShowEpubs.isChecked();
+        boolean showPdfs = checkBoxShowPdfs.isChecked();
+        boolean booksOnly = checkBoxBooksOnly.isChecked();
+        
+        if (!showEpubs && !showPdfs) {
+            Toast.makeText(this, "Please select at least one file type to display", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        // Save preferences
+        // Save Zotero credentials
         userPreferences.setZoteroUsername(username);
         userPreferences.setZoteroUserId(userId);
         userPreferences.setZoteroApiKey(apiKey);
+        
+        // Save file type preferences
+        userPreferences.setShowEpubs(showEpubs);
+        userPreferences.setShowPdfs(showPdfs);
+        userPreferences.setBooksOnly(booksOnly);
         
         // Save display mode
         int displayMode;
