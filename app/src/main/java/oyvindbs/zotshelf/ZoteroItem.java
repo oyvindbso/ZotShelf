@@ -1,5 +1,6 @@
 package oyvindbs.zotshelf;
 
+
 import com.google.gson.annotations.SerializedName;
 
 public class ZoteroItem {
