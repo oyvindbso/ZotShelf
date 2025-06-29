@@ -1,6 +1,5 @@
 package oyvindbs.zotshelf;
 
-
 import android.content.Context;
 import android.util.Log;
 
@@ -53,7 +52,7 @@ public class ZoteroApiClient {
             // Log all API requests and responses
             Log.d(TAG, message);
         });
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY); // Change to BODY for full request/response logging
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
         
         OkHttpClient client = new OkHttpClient.Builder()
                 .addInterceptor(loggingInterceptor)
@@ -117,7 +116,10 @@ public class ZoteroApiClient {
         void onError(ZoteroItem item, String errorMessage);
     }
 
-    public void getEpubItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
+    /**
+     * Get ebook items filtered by user preferences
+     */
+    public void getEbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
         executor.execute(() -> {
             Call<List<ZoteroItem>> call = zoteroService.getItems(userId, apiKey, "json", "attachment", 100);
             
@@ -125,23 +127,159 @@ public class ZoteroApiClient {
                 Response<List<ZoteroItem>> response = call.execute();
                 if (response.isSuccessful() && response.body() != null) {
                     List<ZoteroItem> allItems = response.body();
-                    List<ZoteroItem> epubItems = new ArrayList<>();
+                    List<ZoteroItem> filteredItems = filterItemsByUserPreferences(allItems);
                     
-                    // Filter to only EPUB attachments
-                    for (ZoteroItem item : allItems) {
-                        if (item.getMimeType() != null && 
-                            item.getMimeType().equals("application/epub+zip")) {
-                            epubItems.add(item);
-                        }
-                    }
-                    
-                    callback.onSuccess(epubItems);
+                    callback.onSuccess(filteredItems);
                 } else {
                     callback.onError("Failed to fetch items: " + response.code());
                 }
             } catch (IOException e) {
                 Log.e(TAG, "API error", e);
                 callback.onError("Network error: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Get ebook items by collection, filtered by user preferences
+     */
+    public void getEbookItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+        executor.execute(() -> {
+            // If no collection selected, get all items
+            if (collectionKey == null || collectionKey.isEmpty()) {
+                getEbookItems(userId, apiKey, callback);
+                return;
+            }
+
+            Call<List<ZoteroItem>> call = zoteroService.getItemsByCollection(userId, collectionKey, apiKey, "json", "attachment", 100);
+
+            try {
+                Response<List<ZoteroItem>> response = call.execute();
+                if (response.isSuccessful() && response.body() != null) {
+                    List<ZoteroItem> allItems = response.body();
+                    List<ZoteroItem> filteredItems = filterItemsByUserPreferences(allItems);
+
+                    callback.onSuccess(filteredItems);
+                } else {
+                    callback.onError("Failed to fetch items: " + response.code());
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "API error", e);
+                callback.onError("Network error: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Filter items based on user preferences for file types
+     */
+    private List<ZoteroItem> filterItemsByUserPreferences(List<ZoteroItem> allItems) {
+        UserPreferences prefs = new UserPreferences(context);
+        boolean showEpubs = prefs.getShowEpubs();
+        boolean showPdfs = prefs.getShowPdfs();
+        
+        List<ZoteroItem> filteredItems = new ArrayList<>();
+        
+        for (ZoteroItem item : allItems) {
+            String mimeType = item.getMimeType();
+            if (mimeType != null) {
+                if (mimeType.equals("application/epub+zip") && showEpubs) {
+                    filteredItems.add(item);
+                } else if (mimeType.equals("application/pdf") && showPdfs) {
+                    filteredItems.add(item);
+                }
+            }
+        }
+        
+        return filteredItems;
+    }
+
+    /**
+     * Filter items by content type after parent items have been fetched
+     */
+    private List<ZoteroItem> filterByContentType(List<ZoteroItem> items) {
+        UserPreferences prefs = new UserPreferences(context);
+        boolean booksOnly = prefs.getBooksOnly();
+        
+        if (!booksOnly) {
+            return items; // No content filtering needed
+        }
+        
+        List<ZoteroItem> bookItems = new ArrayList<>();
+        for (ZoteroItem item : items) {
+            if (item.isBook()) {
+                bookItems.add(item);
+            } else {
+                // Log what we're filtering out for debugging
+                Log.d(TAG, "Filtering out non-book item: " + item.getTitle() + 
+                      " (type: " + item.getParentItemType() + ")");
+            }
+        }
+        
+        return bookItems;
+    }
+
+    /**
+     * Check if the user has any file types enabled
+     */
+    public boolean hasEnabledFileTypes() {
+        UserPreferences prefs = new UserPreferences(context);
+        return prefs.hasAnyFileTypeEnabled();
+    }
+
+    /**
+     * Download ebook (EPUB or PDF) file
+     */
+    public void downloadEbook(ZoteroItem item, FileCallback callback) {
+        executor.execute(() -> {
+            // Determine file extension based on MIME type
+            String fileExtension;
+            String mimeType = item.getMimeType();
+            if ("application/epub+zip".equals(mimeType)) {
+                fileExtension = ".epub";
+            } else if ("application/pdf".equals(mimeType)) {
+                fileExtension = ".pdf";
+            } else {
+                callback.onError(item, "Unsupported file type: " + mimeType);
+                return;
+            }
+            
+            // Check if we have the file cached already
+            String fileName = item.getKey() + fileExtension;
+            File ebookFile = new File(cacheDir, fileName);
+            
+            if (ebookFile.exists()) {
+                callback.onFileDownloaded(item, ebookFile.getAbsolutePath());
+                return;
+            }
+            
+            // Get the download URL from the item
+            if (item.getLinks() == null || item.getLinks().getEnclosure() == null) {
+                callback.onError(item, "No download link available");
+                return;
+            }
+            
+            String downloadUrl = item.getLinks().getEnclosure().getHref();
+            String apiKey = new UserPreferences(context).getZoteroApiKey();
+            
+            Call<ResponseBody> call = zoteroService.downloadFile(downloadUrl, apiKey);
+            
+            try {
+                Response<ResponseBody> response = call.execute();
+                if (response.isSuccessful() && response.body() != null) {
+                    boolean success = writeResponseBodyToDisk(response.body(), ebookFile);
+                    
+                    if (success) {
+                        callback.onFileDownloaded(item, ebookFile.getAbsolutePath());
+                    } else {
+                        callback.onError(item, "Failed to save file");
+                    }
+                } else {
+                    callback.onError(item, "Failed to download file: " + response.code());
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Download error", e);
+                callback.onError(item, "Network error: " + e.getMessage());
             }
         });
     }
@@ -218,35 +356,22 @@ public class ZoteroApiClient {
             }
         });
     }
-
-    public void getEpubItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+    
+    public void getParentItem(String userId, String apiKey, String parentItemKey, ZoteroCallback<ZoteroItem> callback) {
+        if (parentItemKey == null || parentItemKey.isEmpty()) {
+            callback.onError("Parent item key is null or empty");
+            return;
+        }
+        
         executor.execute(() -> {
-            // If no collection selected, get all items
-            if (collectionKey == null || collectionKey.isEmpty()) {
-                getEpubItems(userId, apiKey, callback);
-                return;
-            }
-
-            // Call the API with the collection filter
-            Call<List<ZoteroItem>> call = zoteroService.getItemsByCollection(userId, collectionKey, apiKey, "json", "attachment", 100);
-
+            Call<ZoteroItem> call = zoteroService.getItemByKey(userId, parentItemKey, apiKey);
+            
             try {
-                Response<List<ZoteroItem>> response = call.execute();
+                Response<ZoteroItem> response = call.execute();
                 if (response.isSuccessful() && response.body() != null) {
-                    List<ZoteroItem> allItems = response.body();
-                    List<ZoteroItem> epubItems = new ArrayList<>();
-
-                    // Filter to only EPUB attachments
-                    for (ZoteroItem item : allItems) {
-                        if (item.getMimeType() != null && 
-                            item.getMimeType().equals("application/epub+zip")) {
-                            epubItems.add(item);
-                        }
-                    }
-
-                    callback.onSuccess(epubItems);
+                    callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Failed to fetch items: " + response.code());
+                    callback.onError("Failed to fetch parent item: " + response.code());
                 }
             } catch (IOException e) {
                 Log.e(TAG, "API error", e);
@@ -255,41 +380,79 @@ public class ZoteroApiClient {
         });
     }
 
-    public void downloadEpub(ZoteroItem item, FileCallback callback) {
-        executor.execute(() -> {
-            // Check if we have the EPUB cached already
-            String fileName = item.getKey() + ".epub";
-            File epubFile = new File(cacheDir, fileName);
-            
-            if (epubFile.exists()) {
-                callback.onFileDownloaded(item, epubFile.getAbsolutePath());
-                return;
-            }
-            
-            // Get the download URL from the item
-            String downloadUrl = item.getLinks().getEnclosure().getHref();
-            String apiKey = new UserPreferences(context).getZoteroApiKey();
-            
-            Call<ResponseBody> call = zoteroService.downloadFile(downloadUrl, apiKey);
-            
-            try {
-                Response<ResponseBody> response = call.execute();
-                if (response.isSuccessful() && response.body() != null) {
-                    boolean success = writeResponseBodyToDisk(response.body(), epubFile);
-                    
-                    if (success) {
-                        callback.onFileDownloaded(item, epubFile.getAbsolutePath());
-                    } else {
-                        callback.onError(item, "Failed to save EPUB file");
-                    }
-                } else {
-                    callback.onError(item, "Failed to download EPUB: " + response.code());
+    /**
+     * Get ebook items with metadata and content filtering
+     */
+    public void getEbookItemsWithMetadata(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+        // First get all ebook items
+        ZoteroCallback<List<ZoteroItem>> ebookCallback = new ZoteroCallback<List<ZoteroItem>>() {
+            @Override
+            public void onSuccess(List<ZoteroItem> ebookItems) {
+                if (ebookItems.isEmpty()) {
+                    callback.onSuccess(ebookItems);
+                    return;
                 }
-            } catch (IOException e) {
-                Log.e(TAG, "Download error", e);
-                callback.onError(item, "Network error: " + e.getMessage());
+                
+                // For each ebook item, fetch its parent item if it has one
+                final List<ZoteroItem> processedItems = new ArrayList<>();
+                final int[] itemsToProcess = {ebookItems.size()};
+                
+                for (ZoteroItem ebookItem : ebookItems) {
+                    String parentKey = ebookItem.getParentItemKey();
+                    
+                    if (parentKey != null && !parentKey.isEmpty()) {
+                        getParentItem(userId, apiKey, parentKey, new ZoteroCallback<ZoteroItem>() {
+                            @Override
+                            public void onSuccess(ZoteroItem parentItem) {
+                                ebookItem.setParentItem(parentItem);
+                                processedItems.add(ebookItem);
+                                
+                                itemsToProcess[0]--;
+                                if (itemsToProcess[0] == 0) {
+                                    // Now filter by content type after all parent items are fetched
+                                    List<ZoteroItem> finalItems = filterByContentType(processedItems);
+                                    callback.onSuccess(finalItems);
+                                }
+                            }
+                            
+                            @Override
+                            public void onError(String errorMessage) {
+                                Log.e(TAG, "Error fetching parent item: " + errorMessage);
+                                // Still add the item but it won't pass book filtering
+                                processedItems.add(ebookItem);
+                                
+                                itemsToProcess[0]--;
+                                if (itemsToProcess[0] == 0) {
+                                    List<ZoteroItem> finalItems = filterByContentType(processedItems);
+                                    callback.onSuccess(finalItems);
+                                }
+                            }
+                        });
+                    } else {
+                        // No parent item - this won't pass book filtering if books-only is enabled
+                        processedItems.add(ebookItem);
+                        
+                        itemsToProcess[0]--;
+                        if (itemsToProcess[0] == 0) {
+                            List<ZoteroItem> finalItems = filterByContentType(processedItems);
+                            callback.onSuccess(finalItems);
+                        }
+                    }
+                }
             }
-        });
+            
+            @Override
+            public void onError(String errorMessage) {
+                callback.onError(errorMessage);
+            }
+        };
+        
+        // Get ebook items first
+        if (collectionKey == null || collectionKey.isEmpty()) {
+            getEbookItems(userId, apiKey, ebookCallback);
+        } else {
+            getEbookItemsByCollection(userId, apiKey, collectionKey, ebookCallback);
+        }
     }
     
     private boolean writeResponseBodyToDisk(ResponseBody body, File outputFile) {
@@ -321,307 +484,5 @@ public class ZoteroApiClient {
             Log.e(TAG, "File write error", e);
             return false;
         }
-    }
-
-    
-    public void getParentItem(String userId, String apiKey, String parentItemKey, ZoteroCallback<ZoteroItem> callback) {
-    if (parentItemKey == null || parentItemKey.isEmpty()) {
-        callback.onError("Parent item key is null or empty");
-        return;
-    }
-    
-    executor.execute(() -> {
-        Call<ZoteroItem> call = zoteroService.getItemByKey(userId, parentItemKey, apiKey);
-        
-        try {
-            Response<ZoteroItem> response = call.execute();
-            if (response.isSuccessful() && response.body() != null) {
-                callback.onSuccess(response.body());
-            } else {
-                callback.onError("Failed to fetch parent item: " + response.code());
-            }
-        } catch (IOException e) {
-            Log.e(TAG, "API error", e);
-            callback.onError("Network error: " + e.getMessage());
-        }
-    });
-    }
-    public void getEpubItemsWithMetadata(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
-    // First get all EPUB items
-    ZoteroCallback<List<ZoteroItem>> epubCallback = new ZoteroCallback<List<ZoteroItem>>() {
-        @Override
-        public void onSuccess(List<ZoteroItem> epubItems) {
-            if (epubItems.isEmpty()) {
-                callback.onSuccess(epubItems); // No items to process
-                return;
-            }
-            
-            // For each EPUB item, fetch its parent item if it has one
-            final List<ZoteroItem> processedItems = new ArrayList<>();
-            final int[] itemsToProcess = {epubItems.size()};
-            
-            for (ZoteroItem epubItem : epubItems) {
-                String parentKey = epubItem.getParentItemKey();
-                
-                if (parentKey != null && !parentKey.isEmpty()) {
-                    // Fetch parent item metadata
-                    getParentItem(userId, apiKey, parentKey, new ZoteroCallback<ZoteroItem>() {
-                        @Override
-                        public void onSuccess(ZoteroItem parentItem) {
-                            epubItem.setParentItem(parentItem);
-                            processedItems.add(epubItem);
-                            
-                            // Check if all items are processed
-                            itemsToProcess[0]--;
-                            if (itemsToProcess[0] == 0) {
-                                callback.onSuccess(processedItems);
-                            }
-                        }
-                        
-                        @Override
-                        public void onError(String errorMessage) {
-                            Log.e(TAG, "Error fetching parent item: " + errorMessage);
-                            // Still add the item even without parent metadata
-                            processedItems.add(epubItem);
-                            
-                            // Check if all items are processed
-                            itemsToProcess[0]--;
-                            if (itemsToProcess[0] == 0) {
-                                callback.onSuccess(processedItems);
-                            }
-                        }
-                    });
-                } else {
-                    // No parent item, just add as is
-                    processedItems.add(epubItem);
-                    
-                    // Check if all items are processed
-                    itemsToProcess[0]--;
-                    if (itemsToProcess[0] == 0) {
-                        callback.onSuccess(processedItems);
-                    }
-                }
-            }
-        }
-        
-        @Override
-        public void onError(String errorMessage) {
-            callback.onError(errorMessage);
-        }
-    };
-    
-    // Get EPUB items first
-    if (collectionKey == null || collectionKey.isEmpty()) {
-        getEpubItems(userId, apiKey, epubCallback);
-    } else {
-        getEpubItemsByCollection(userId, apiKey, collectionKey, epubCallback);
-    }
-    }
-}
-
-public void getEbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
-    executor.execute(() -> {
-        Call<List<ZoteroItem>> call = zoteroService.getItems(userId, apiKey, "json", "attachment", 100);
-        
-        try {
-            Response<List<ZoteroItem>> response = call.execute();
-            if (response.isSuccessful() && response.body() != null) {
-                List<ZoteroItem> allItems = response.body();
-                List<ZoteroItem> filteredItems = filterItemsByUserPreferences(allItems);
-                
-                callback.onSuccess(filteredItems);
-            } else {
-                callback.onError("Failed to fetch items: " + response.code());
-            }
-        } catch (IOException e) {
-            Log.e(TAG, "API error", e);
-            callback.onError("Network error: " + e.getMessage());
-        }
-    });
-}
-/**
- * Get ebook items by collection, filtered by user preferences
- */
-public void getEbookItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
-    executor.execute(() -> {
-        // If no collection selected, get all items
-        if (collectionKey == null || collectionKey.isEmpty()) {
-            getEbookItems(userId, apiKey, callback);
-            return;
-        }
-
-        Call<List<ZoteroItem>> call = zoteroService.getItemsByCollection(userId, collectionKey, apiKey, "json", "attachment", 100);
-
-        try {
-            Response<List<ZoteroItem>> response = call.execute();
-            if (response.isSuccessful() && response.body() != null) {
-                List<ZoteroItem> allItems = response.body();
-                List<ZoteroItem> filteredItems = filterItemsByUserPreferences(allItems);
-
-                callback.onSuccess(filteredItems);
-            } else {
-                callback.onError("Failed to fetch items: " + response.code());
-            }
-        } catch (IOException e) {
-            Log.e(TAG, "API error", e);
-            callback.onError("Network error: " + e.getMessage());
-        }
-    });
-}
-/**
- * Filter items based on user preferences for file types
- */
-private List<ZoteroItem> filterItemsByUserPreferences(List<ZoteroItem> allItems) {
-    UserPreferences prefs = new UserPreferences(context);
-    boolean showEpubs = prefs.getShowEpubs();
-    boolean showPdfs = prefs.getShowPdfs();
-    
-    List<ZoteroItem> filteredItems = new ArrayList<>();
-    
-    for (ZoteroItem item : allItems) {
-        String mimeType = item.getMimeType();
-        if (mimeType != null) {
-            if (mimeType.equals("application/epub+zip") && showEpubs) {
-                filteredItems.add(item);
-            } else if (mimeType.equals("application/pdf") && showPdfs) {
-                filteredItems.add(item);
-            }
-        }
-    }
-    
-    return filteredItems;
-}
-
-/**
- * Check if the user has any file types enabled
- */
-public boolean hasEnabledFileTypes() {
-    UserPreferences prefs = new UserPreferences(context);
-    return prefs.hasAnyFileTypeEnabled();
-}
-
-/**
- * Download ebook (EPUB or PDF) file
- */
-public void downloadEbook(ZoteroItem item, FileCallback callback) {
-    executor.execute(() -> {
-        // Determine file extension based on MIME type
-        String fileExtension;
-        String mimeType = item.getMimeType();
-        if ("application/epub+zip".equals(mimeType)) {
-            fileExtension = ".epub";
-        } else if ("application/pdf".equals(mimeType)) {
-            fileExtension = ".pdf";
-        } else {
-            callback.onError(item, "Unsupported file type: " + mimeType);
-            return;
-        }
-        
-        // Check if we have the file cached already
-        String fileName = item.getKey() + fileExtension;
-        File ebookFile = new File(cacheDir, fileName);
-        
-        if (ebookFile.exists()) {
-            callback.onFileDownloaded(item, ebookFile.getAbsolutePath());
-            return;
-        }
-        
-        // Get the download URL from the item
-        if (item.getLinks() == null || item.getLinks().getEnclosure() == null) {
-            callback.onError(item, "No download link available");
-            return;
-        }
-        
-        String downloadUrl = item.getLinks().getEnclosure().getHref();
-        String apiKey = new UserPreferences(context).getZoteroApiKey();
-        
-        Call<ResponseBody> call = zoteroService.downloadFile(downloadUrl, apiKey);
-        
-        try {
-            Response<ResponseBody> response = call.execute();
-            if (response.isSuccessful() && response.body() != null) {
-                boolean success = writeResponseBodyToDisk(response.body(), ebookFile);
-                
-                if (success) {
-                    callback.onFileDownloaded(item, ebookFile.getAbsolutePath());
-                } else {
-                    callback.onError(item, "Failed to save file");
-                }
-            } else {
-                callback.onError(item, "Failed to download file: " + response.code());
-            }
-        } catch (IOException e) {
-            Log.e(TAG, "Download error", e);
-            callback.onError(item, "Network error: " + e.getMessage());
-        }
-    });
-}
-
-/**
- * Get ebook items with metadata (replaces getEpubItemsWithMetadata)
- */
-public void getEbookItemsWithMetadata(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
-    // First get all ebook items
-    ZoteroCallback<List<ZoteroItem>> ebookCallback = new ZoteroCallback<List<ZoteroItem>>() {
-        @Override
-        public void onSuccess(List<ZoteroItem> ebookItems) {
-            if (ebookItems.isEmpty()) {
-                callback.onSuccess(ebookItems);
-                return;
-            }
-            
-            // For each ebook item, fetch its parent item if it has one
-            final List<ZoteroItem> processedItems = new ArrayList<>();
-            final int[] itemsToProcess = {ebookItems.size()};
-            
-            for (ZoteroItem ebookItem : ebookItems) {
-                String parentKey = ebookItem.getParentItemKey();
-                
-                if (parentKey != null && !parentKey.isEmpty()) {
-                    getParentItem(userId, apiKey, parentKey, new ZoteroCallback<ZoteroItem>() {
-                        @Override
-                        public void onSuccess(ZoteroItem parentItem) {
-                            ebookItem.setParentItem(parentItem);
-                            processedItems.add(ebookItem);
-                            
-                            itemsToProcess[0]--;
-                            if (itemsToProcess[0] == 0) {
-                                callback.onSuccess(processedItems);
-                            }
-                        }
-                        
-                        @Override
-                        public void onError(String errorMessage) {
-                            Log.e(TAG, "Error fetching parent item: " + errorMessage);
-                            processedItems.add(ebookItem);
-                            
-                            itemsToProcess[0]--;
-                            if (itemsToProcess[0] == 0) {
-                                callback.onSuccess(processedItems);
-                            }
-                        }
-                    });
-                } else {
-                    processedItems.add(ebookItem);
-                    
-                    itemsToProcess[0]--;
-                    if (itemsToProcess[0] == 0) {
-                        callback.onSuccess(processedItems);
-                    }
-                }
-            }
-        }
-        
-        @Override
-        public void onError(String errorMessage) {
-            callback.onError(errorMessage);
-        }
-    };
-    
-    // Get ebook items first
-    if (collectionKey == null || collectionKey.isEmpty()) {
-        getEbookItems(userId, apiKey, ebookCallback);
-    } else {
-        getEbookItemsByCollection(userId, apiKey, collectionKey, ebookCallback);
     }
 }
