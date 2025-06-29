@@ -1,76 +1,67 @@
 plugins {
-id ‘com.android.application’
+    id 'com.android.application'
 }
 
 android {
-namespace ‘com.example.zotshelf’
+    namespace 'com.example.zotshelf'
 
-```
-testOptions {
-unitTests.all {
-    enabled = false
-}
-} 
-compileSdk 35
+    testOptions {
+        unitTests.all {
+            enabled = false
+        }
+    } 
+    compileSdk 35
+    
+    defaultConfig {
+        applicationId "com.example.zotshelf"
+        minSdk 23
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
 
-defaultConfig {
-    applicationId "com.example.zotshelf"
-    minSdk 23
-    targetSdk 34
-    versionCode 1
-    versionName "1.0"
-}
+    testOptions {
+        unitTests.all {
+            enabled = false
+        }
+    }
 
-testOptions {
-unitTests.all {
-    enabled = false
-}
-}
-
-buildTypes {
-    release {
-        minifyEnabled false
-        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
     }
 }
 
-compileOptions {
-    sourceCompatibility JavaVersion.VERSION_1_8
-    targetCompatibility JavaVersion.VERSION_1_8
-}
-lint {
-    abortOnError false
-    checkReleaseBuilds false
-}
-```
-
-}
-
 dependencies {
-implementation ‘androidx.appcompat:appcompat:1.7.0’
-implementation ‘com.google.android.material:material:1.12.0’
-implementation ‘androidx.constraintlayout:constraintlayout:2.2.1’
-implementation ‘androidx.swiperefreshlayout:swiperefreshlayout:1.1.0’
-
-```
-// room database
-implementation 'androidx.room:room-runtime:2.6.1'
-annotationProcessor 'androidx.room:room-compiler:2.5.2'
-// Retrofit for API calls
-implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-implementation 'com.squareup.okhttp3:logging-interceptor:4.11.0'
-
-// Glide for image loading
-implementation 'com.github.bumptech.glide:glide:4.15.1'
-
-// Epublib for EPUB parsing
-implementation 'com.github.mertakdut:EpubParser:1.0.95' 
-implementation 'org.slf4j:slf4j-android:1.7.36'    
-
-// Room for caching
-implementation 'androidx.room:room-runtime:2.6.1'
-annotationProcessor 'androidx.room:room-compiler:2.5.2'
-```
-
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    
+    // Room database
+    implementation 'androidx.room:room-runtime:2.6.1'
+    annotationProcessor 'androidx.room:room-compiler:2.6.1'
+    
+    // Retrofit for API calls
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.11.0'
+    
+    // Glide for image loading
+    implementation 'com.github.bumptech.glide:glide:4.15.1'
+    
+    // Epublib for EPUB parsing
+    implementation 'com.github.mertakdut:EpubParser:1.0.95' 
+    implementation 'org.slf4j:slf4j-android:1.7.36'
 }
