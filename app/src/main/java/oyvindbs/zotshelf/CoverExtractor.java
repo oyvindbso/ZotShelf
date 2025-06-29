@@ -1,4 +1,4 @@
-package com.example.zotshelf;
+package oyvindbs.zotshelf;
 
 import android.graphics.Bitmap;
 import android.graphics.pdf.PdfRenderer;
