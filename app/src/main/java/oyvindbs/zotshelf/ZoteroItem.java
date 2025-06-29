@@ -1,4 +1,4 @@
-package oyvindbs.zotshelf;
+package com.example.zotshelf;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -106,6 +106,61 @@ public class ZoteroItem {
         this.parentItem = parentItem;
     }
     
+    public ZoteroItem getParentItem() {
+        return parentItem;
+    }
+    
+    /**
+     * Get the item type of the parent item (the actual content type)
+     * @return The parent item's type, or null if no parent
+     */
+    public String getParentItemType() {
+        if (parentItem != null && parentItem.data != null) {
+            return parentItem.data.itemType;
+        }
+        return null;
+    }
+    
+    /**
+     * Check if this item represents a book based on the parent item type
+     * @return true if this is likely a book, false otherwise
+     */
+    public boolean isBook() {
+        String parentType = getParentItemType();
+        if (parentType == null) {
+            return false; // If no parent, we can't determine if it's a book
+        }
+        
+        // Zotero item types that typically represent books
+        return parentType.equals("book") || 
+               parentType.equals("bookSection") ||
+               parentType.equals("encyclopediaArticle") ||
+               parentType.equals("dictionaryEntry") ||
+               parentType.equals("manuscript") ||
+               parentType.equals("thesis") ||
+               parentType.equals("report"); // Some reports might be book-like
+    }
+    
+    /**
+     * Check if this item represents an article or academic paper
+     * @return true if this is likely an article, false otherwise
+     */
+    public boolean isArticle() {
+        String parentType = getParentItemType();
+        if (parentType == null) {
+            return false;
+        }
+        
+        // Zotero item types that typically represent articles
+        return parentType.equals("journalArticle") ||
+               parentType.equals("magazineArticle") ||
+               parentType.equals("newspaperArticle") ||
+               parentType.equals("conferencePaper") ||
+               parentType.equals("preprint") ||
+               parentType.equals("blogPost") ||
+               parentType.equals("forumPost");
+    }
+    
     public String getAuthors() {
         // First try to get authors from parent item
         if (parentItem != null && parentItem.data != null && 
@@ -181,6 +236,8 @@ public class ZoteroItem {
                ", title=" + getTitle() + 
                ", authors=" + getAuthors() + 
                ", parentItemKey=" + getParentItemKey() + 
+               ", parentItemType=" + getParentItemType() +
+               ", isBook=" + isBook() +
                "}";
     }
 }

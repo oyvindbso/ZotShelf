@@ -117,9 +117,25 @@
                 android:id="@+id/checkBoxShowPdfs"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="8dp"
                 android:text="Show PDF files"
                 android:textSize="16sp" />
+
+            <CheckBox
+                android:id="@+id/checkBoxBooksOnly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Books only (filter out articles and papers)"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Note: 'Books only' filters out journal articles, conference papers, and other academic documents, showing only actual books."
+                android:textSize="14sp"
+                android:textStyle="italic" />
 
             <TextView
                 android:layout_width="match_parent"

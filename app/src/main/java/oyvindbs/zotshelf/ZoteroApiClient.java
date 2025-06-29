@@ -1,7 +1,6 @@
 // Add these methods to your existing ZoteroApiClient.java class:
-
 /**
- * Get both EPUB and PDF items from Zotero
+ * Get ebook items filtered by user preferences
  */
 public void getEbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
     executor.execute(() -> {
@@ -23,10 +22,9 @@ public void getEbookItems(String userId, String apiKey, ZoteroCallback<List<Zote
         }
     });
 }
-
 /**
  * Get ebook items by collection, filtered by user preferences
- *  */
+ */
 public void getEbookItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
     executor.execute(() -> {
         // If no collection selected, get all items
@@ -53,8 +51,6 @@ public void getEbookItemsByCollection(String userId, String apiKey, String colle
         }
     });
 }
-
-
 /**
  * Filter items based on user preferences for file types
  */

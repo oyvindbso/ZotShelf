@@ -23,6 +23,7 @@ public class SettingsActivity extends AppCompatActivity {
     private TextInputEditText editZoteroApiKey;
     private CheckBox checkBoxShowEpubs;
     private CheckBox checkBoxShowPdfs;
+    private CheckBox checkBoxBooksOnly;
     private RadioGroup radioGroupDisplayMode;
     private RadioButton radioTitleOnly;
     private RadioButton radioAuthorOnly;
@@ -48,6 +49,7 @@ public class SettingsActivity extends AppCompatActivity {
         editZoteroApiKey = findViewById(R.id.editZoteroApiKey);
         checkBoxShowEpubs = findViewById(R.id.checkBoxShowEpubs);
         checkBoxShowPdfs = findViewById(R.id.checkBoxShowPdfs);
+        checkBoxBooksOnly = findViewById(R.id.checkBoxBooksOnly);
         radioGroupDisplayMode = findViewById(R.id.radioGroupDisplayMode);
         radioTitleOnly = findViewById(R.id.radioTitleOnly);
         radioAuthorOnly = findViewById(R.id.radioAuthorOnly);
@@ -95,6 +97,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Load file type preferences
         checkBoxShowEpubs.setChecked(userPreferences.getShowEpubs());
         checkBoxShowPdfs.setChecked(userPreferences.getShowPdfs());
+        checkBoxBooksOnly.setChecked(userPreferences.getBooksOnly());
         
         // Set the display mode radio button
         int displayMode = userPreferences.getDisplayMode();
@@ -126,6 +129,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Validate file type selection
         boolean showEpubs = checkBoxShowEpubs.isChecked();
         boolean showPdfs = checkBoxShowPdfs.isChecked();
+        boolean booksOnly = checkBoxBooksOnly.isChecked();
         
         if (!showEpubs && !showPdfs) {
             Toast.makeText(this, "Please select at least one file type to display", Toast.LENGTH_SHORT).show();
@@ -140,6 +144,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Save file type preferences
         userPreferences.setShowEpubs(showEpubs);
         userPreferences.setShowPdfs(showPdfs);
+        userPreferences.setBooksOnly(booksOnly);
         
         // Save display mode
         int displayMode;
