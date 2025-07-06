@@ -1,17 +1,21 @@
 package oyvindbs.zotshelf;
 
+
 import android.content.Context;
 import android.content.SharedPreferences;
 
 public class UserPreferences {
     
-    private static final String PREF_NAME = "zotshelfPrefs";
+    private static final String PREF_NAME = "ZoteroEpubCoversPrefs";
     private static final String KEY_ZOTERO_USER_ID = "zotero_user_id";
     private static final String KEY_ZOTERO_API_KEY = "zotero_api_key";
     private static final String KEY_ZOTERO_USERNAME = "zotero_username";
     private static final String KEY_SELECTED_COLLECTION = "selected_collection";
     private static final String KEY_SELECTED_COLLECTION_NAME = "selected_collection_name";
     private static final String KEY_DISPLAY_MODE = "display_mode";
+    private static final String KEY_SHOW_EPUBS = "show_epubs";
+    private static final String KEY_SHOW_PDFS = "show_pdfs";
+    private static final String KEY_BOOKS_ONLY = "books_only";
     
     // Display mode constants
     public static final int DISPLAY_TITLE_ONLY = 0;
@@ -84,6 +88,34 @@ public class UserPreferences {
     
     public void setDisplayMode(int displayMode) {
         preferences.edit().putInt(KEY_DISPLAY_MODE, displayMode).apply();
+    }
+    
+    public boolean getShowEpubs() {
+        return preferences.getBoolean(KEY_SHOW_EPUBS, true); // Default to true
+    }
+    
+    public void setShowEpubs(boolean showEpubs) {
+        preferences.edit().putBoolean(KEY_SHOW_EPUBS, showEpubs).apply();
+    }
+    
+    public boolean getShowPdfs() {
+        return preferences.getBoolean(KEY_SHOW_PDFS, true); // Default to true
+    }
+    
+    public void setShowPdfs(boolean showPdfs) {
+        preferences.edit().putBoolean(KEY_SHOW_PDFS, showPdfs).apply();
+    }
+    
+    public boolean getBooksOnly() {
+        return preferences.getBoolean(KEY_BOOKS_ONLY, true); // Default to true (books only)
+    }
+    
+    public void setBooksOnly(boolean booksOnly) {
+        preferences.edit().putBoolean(KEY_BOOKS_ONLY, booksOnly).apply();
+    }
+    
+    public boolean hasAnyFileTypeEnabled() {
+        return getShowEpubs() || getShowPdfs();
     }
 
     public void clearAll() {

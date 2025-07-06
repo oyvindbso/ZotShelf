@@ -6,9 +6,9 @@ android {
     namespace 'oyvindbs.zotshelf'
 
     testOptions {
-    unitTests.all {
-        enabled = false
-    }
+        unitTests.all {
+            enabled = false
+        }
     } 
     compileSdk 35
     
@@ -21,9 +21,9 @@ android {
     }
 
     testOptions {
-    unitTests.all {
-        enabled = false
-    }
+        unitTests.all {
+            enabled = false
+        }
     }
 
     buildTypes {
@@ -49,9 +49,10 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     
-	// room database
-	implementation 'androidx.room:room-runtime:2.6.1'
-	annotationProcessor 'androidx.room:room-compiler:2.5.2'
+    // Room database
+    implementation 'androidx.room:room-runtime:2.6.1'
+    annotationProcessor 'androidx.room:room-compiler:2.6.1'
+    
     // Retrofit for API calls
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
@@ -62,9 +63,5 @@ dependencies {
     
     // Epublib for EPUB parsing
     implementation 'com.github.mertakdut:EpubParser:1.0.95' 
-    implementation 'org.slf4j:slf4j-android:1.7.36'    
-    
-    // Room for caching
-    implementation 'androidx.room:room-runtime:2.6.1'
-    annotationProcessor 'androidx.room:room-compiler:2.5.2'
+    implementation 'org.slf4j:slf4j-android:1.7.36'
 }
