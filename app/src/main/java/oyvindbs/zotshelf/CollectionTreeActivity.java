@@ -42,25 +42,21 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_collection_tree);
 
-        // Enable the back button in the action bar
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setTitle(R.string.title_select_collection);
         }
 
-        // Initialize views
         recyclerView = findViewById(R.id.recyclerViewCollections);
         progressBar = findViewById(R.id.progressBarCollections);
         emptyView = findViewById(R.id.emptyViewCollections);
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
 
-        // Setup RecyclerView
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new CollectionTreeAdapter(this, treeItems, this);
         recyclerView.setAdapter(adapter);
 
-        // Setup SwipeRefreshLayout
         swipeRefreshLayout.setOnRefreshListener(this::loadCollections);
         swipeRefreshLayout.setColorSchemeResources(
             android.R.color.holo_blue_bright,
@@ -69,12 +65,10 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
             android.R.color.holo_red_light
         );
 
-        // Initialize API client and preferences
         zoteroApiClient = new ZoteroApiClient(this);
         userPreferences = new UserPreferences(this);
         currentSelectedKey = userPreferences.getSelectedCollectionKey();
 
-        // Load collections
         loadCollections();
     }
 
@@ -98,13 +92,9 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
         
         Log.d(TAG, "Loading collections for user ID: '" + userId + "'");
 
-        // Get ALL collections with pagination if needed
         getAllCollections(userId, apiKey, new ArrayList<>(), 0);
     }
 
-    /**
-     * Recursively fetch all collections using pagination
-     */
     private void getAllCollections(String userId, String apiKey, List<ZoteroCollection> allCollections, int start) {
         zoteroApiClient.getCollectionsPaginated(userId, apiKey, start, 100, new ZoteroApiClient.ZoteroCallback<List<ZoteroCollection>>() {
             @Override
@@ -113,12 +103,9 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
                 
                 allCollections.addAll(collections);
                 
-                // If we received a full page, there might be more collections
                 if (collections.size() == 100) {
-                    // Fetch next page
                     getAllCollections(userId, apiKey, allCollections, start + 100);
                 } else {
-                    // We have all collections, now process them
                     processAllCollections(allCollections);
                 }
             }
@@ -140,7 +127,6 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
     private void processAllCollections(List<ZoteroCollection> collections) {
         Log.d(TAG, "Processing " + collections.size() + " total collections");
         
-        // Always add "All Collections" as the first item
         treeItems.clear();
         
         CollectionTreeItem allCollectionsItem = new CollectionTreeItem("", "All Collections", 0, !collections.isEmpty());
@@ -166,64 +152,46 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
     private void buildCollectionTree(List<ZoteroCollection> collections) {
         Log.d(TAG, "Building tree with " + collections.size() + " collections");
         
-        // Create a map to hold all collections by key for easy lookup
         Map<String, ZoteroCollection> collectionMap = new HashMap<>();
         for (ZoteroCollection collection : collections) {
             String key = collection.getKey();
-            String name = collection.getName();
-            Log.d(TAG, "Processing collection: '" + name + "' (key: " + key + ", parent: " + collection.getParentCollection() + ")");
-            
             if (key != null && !key.isEmpty()) {
                 collectionMap.put(key, collection);
-            } else {
-                Log.w(TAG, "Collection has null or empty key: " + name);
             }
         }
         
-        // Create a map to store children for each collection
         Map<String, List<String>> childrenMap = new HashMap<>();
         childrenMap.put("root", new ArrayList<>());
         
-        // Process each collection to build parent-child relationships
         for (ZoteroCollection collection : collections) {
             String key = collection.getKey();
             if (key == null || key.isEmpty()) {
-                continue; // Skip invalid collections
+                continue;
             }
             
             String parentKey = collection.getParentCollection();
             
-            // If no parent or parent is false/empty, this is a top-level collection
             if (parentKey == null || parentKey.isEmpty() || parentKey.equals("false")) {
-                Log.d(TAG, "Adding to root: " + collection.getName());
                 childrenMap.get("root").add(key);
             } else {
-                // Check if parent exists in our collection map
                 if (collectionMap.containsKey(parentKey)) {
                     if (!childrenMap.containsKey(parentKey)) {
                         childrenMap.put(parentKey, new ArrayList<>());
                     }
-                    Log.d(TAG, "Adding '" + collection.getName() + "' as child of '" + collectionMap.get(parentKey).getName() + "'");
                     childrenMap.get(parentKey).add(key);
                 } else {
-                    // Parent doesn't exist in our map, treat as root level
-                    Log.w(TAG, "Parent '" + parentKey + "' not found for collection '" + collection.getName() + "', adding to root");
                     childrenMap.get("root").add(key);
                 }
             }
         }
         
-        // Sort root level collections alphabetically
         List<String> rootCollections = childrenMap.get("root");
         if (rootCollections != null && !rootCollections.isEmpty()) {
             sortCollectionKeys(rootCollections, collectionMap);
             
-            // Recursively build the tree
             for (String rootKey : rootCollections) {
                 addCollectionToTree(rootKey, 1, childrenMap, collectionMap);
             }
-        } else {
-            Log.w(TAG, "No root collections found!");
         }
         
         Log.d(TAG, "Final tree size: " + treeItems.size() + " items");
@@ -236,7 +204,6 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
             
             adapter.notifyDataSetChanged();
             
-            // Scroll to the selected item if any
             scrollToSelectedItem();
         });
     }
@@ -250,7 +217,6 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
                 String name1 = (col1 != null) ? col1.getName() : "";
                 String name2 = (col2 != null) ? col2.getName() : "";
                 
-                // Handle null names
                 if (name1 == null) name1 = "";
                 if (name2 == null) name2 = "";
                 
@@ -264,35 +230,27 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
     private void addCollectionToTree(String collectionKey, int level, 
                                     Map<String, List<String>> childrenMap,
                                     Map<String, ZoteroCollection> collectionMap) {
-        // Get the collection object
         ZoteroCollection collection = collectionMap.get(collectionKey);
         if (collection == null) {
-            Log.e(TAG, "Collection not found for key: " + collectionKey);
             return;
         }
         
-        // Check if this collection has children
         List<String> children = childrenMap.get(collectionKey);
         boolean hasChildren = children != null && !children.isEmpty();
         
-        // Create the tree item
         CollectionTreeItem item = new CollectionTreeItem(
                 collectionKey,
                 collection.getName(),
                 level,
                 hasChildren);
         
-        // Set selected state if this is the current selection
         if (collectionKey.equals(currentSelectedKey)) {
             item.setSelected(true);
         }
         
         treeItems.add(item);
-        Log.d(TAG, "Added to tree: " + collection.getName() + " (level " + level + ", hasChildren: " + hasChildren + ")");
         
-        // If this collection has children, add them recursively
         if (hasChildren) {
-            // Sort children alphabetically
             sortCollectionKeys(children, collectionMap);
             
             for (String childKey : children) {
@@ -328,13 +286,11 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
 
     @Override
     public void onCollectionClick(CollectionTreeItem item) {
-        // Save the selected collection
         userPreferences.setSelectedCollectionKey(item.getId());
         userPreferences.setSelectedCollectionName(item.getName());
         
         Log.d(TAG, "Selected collection: " + item.getName() + " with key: " + item.getId());
         
-        // Return to MainActivity
         setResult(RESULT_OK);
         finish();
     }
@@ -345,3 +301,6 @@ public class CollectionTreeActivity extends AppCompatActivity implements Collect
             onBackPressed();
             return true;
         }
+        return super.onOptionsItemSelected(item);
+    }
+}
