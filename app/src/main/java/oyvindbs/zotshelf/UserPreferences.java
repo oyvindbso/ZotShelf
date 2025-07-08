@@ -1,6 +1,5 @@
 package oyvindbs.zotshelf;
 
-
 import android.content.Context;
 import android.content.SharedPreferences;
 
@@ -16,11 +15,16 @@ public class UserPreferences {
     private static final String KEY_SHOW_EPUBS = "show_epubs";
     private static final String KEY_SHOW_PDFS = "show_pdfs";
     private static final String KEY_BOOKS_ONLY = "books_only";
+    private static final String KEY_SORT_MODE = "sort_mode";
     
     // Display mode constants
     public static final int DISPLAY_TITLE_ONLY = 0;
     public static final int DISPLAY_AUTHOR_ONLY = 1;
     public static final int DISPLAY_AUTHOR_TITLE = 2;
+    
+    // Sort mode constants
+    public static final int SORT_BY_TITLE = 0;
+    public static final int SORT_BY_AUTHOR = 1;
     
     private final SharedPreferences preferences;
     
@@ -112,6 +116,14 @@ public class UserPreferences {
     
     public void setBooksOnly(boolean booksOnly) {
         preferences.edit().putBoolean(KEY_BOOKS_ONLY, booksOnly).apply();
+    }
+    
+    public int getSortMode() {
+        return preferences.getInt(KEY_SORT_MODE, SORT_BY_TITLE); // Default to sort by title
+    }
+    
+    public void setSortMode(int sortMode) {
+        preferences.edit().putInt(KEY_SORT_MODE, sortMode).apply();
     }
     
     public boolean hasAnyFileTypeEnabled() {

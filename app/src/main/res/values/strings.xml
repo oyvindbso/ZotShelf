@@ -32,6 +32,12 @@
     <string name="change_display_mode">Change Display Mode</string>
     <string name="cancel">Cancel</string>
     
+    <!-- Sort strings -->
+    <string name="sort_mode_title">Sort Mode</string>
+    <string name="sort_by_title">Sort by Title</string>
+    <string name="sort_by_author">Sort by Author</string>
+    <string name="change_sort_mode">Change Sort Mode</string>
+    
     <!-- File type settings -->
     <string name="file_type_settings">File Type Settings</string>
     <string name="select_file_types">Select which file types to display:</string>

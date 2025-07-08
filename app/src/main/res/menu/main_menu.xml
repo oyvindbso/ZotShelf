@@ -9,6 +9,12 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_sort"
+        android:icon="@drawable/ic_sort"
+        android:title="Sort"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_change_display"
         android:icon="@drawable/ic_display_mode"
         android:title="Change Display Mode"

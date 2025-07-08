@@ -108,51 +108,49 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         return Math.max(2, screenWidthDp / itemWidthDp);
     }
 
-    // Replace the loadCovers method in MainActivity.java:
-
-private void loadCovers() {
-    if (!userPreferences.hasZoteroCredentials()) {
-        showEmptyState("Please enter your Zotero credentials in settings");
-        swipeRefreshLayout.setRefreshing(false);
-        return;
-    }
-    
-    // Check if user has enabled any file types
-    if (!userPreferences.hasAnyFileTypeEnabled()) {
-        showEmptyState("Please enable at least one file type (EPUB or PDF) in settings");
-        swipeRefreshLayout.setRefreshing(false);
-        return;
-    }
-
-    showLoading();
-    
-    // First check if we have cached covers
-    coverRepository.hasCachedCovers(hasCovers -> {
-        // If we have covers and we're offline, load from cache
-        if (hasCovers && !NetworkUtils.isNetworkAvailable(this)) {
-            isOfflineMode = true;
-            loadCachedCovers();
+    private void loadCovers() {
+        if (!userPreferences.hasZoteroCredentials()) {
+            showEmptyState("Please enter your Zotero credentials in settings");
+            swipeRefreshLayout.setRefreshing(false);
             return;
         }
         
-        // If we have network, try to load from API
-        if (NetworkUtils.isNetworkAvailable(this)) {
-            isOfflineMode = false;
-            loadCoversFromApi();
-        } else {
-            // No network, check if we have cached data
-            if (hasCovers) {
+        // Check if user has enabled any file types
+        if (!userPreferences.hasAnyFileTypeEnabled()) {
+            showEmptyState("Please enable at least one file type (EPUB or PDF) in settings");
+            swipeRefreshLayout.setRefreshing(false);
+            return;
+        }
+
+        showLoading();
+        
+        // First check if we have cached covers
+        coverRepository.hasCachedCovers(hasCovers -> {
+            // If we have covers and we're offline, load from cache
+            if (hasCovers && !NetworkUtils.isNetworkAvailable(this)) {
                 isOfflineMode = true;
                 loadCachedCovers();
-            } else {
-                // No cache and no network
-                runOnUiThread(() -> {
-                    showEmptyState("No internet connection and no cached data");
-                    swipeRefreshLayout.setRefreshing(false);
-                });
+                return;
             }
-        }
-    });
+            
+            // If we have network, try to load from API
+            if (NetworkUtils.isNetworkAvailable(this)) {
+                isOfflineMode = false;
+                loadCoversFromApi();
+            } else {
+                // No network, check if we have cached data
+                if (hasCovers) {
+                    isOfflineMode = true;
+                    loadCachedCovers();
+                } else {
+                    // No cache and no network
+                    runOnUiThread(() -> {
+                        showEmptyState("No internet connection and no cached data");
+                        swipeRefreshLayout.setRefreshing(false);
+                    });
+                }
+            }
+        });
     }
     
     private void loadCachedCovers() {
@@ -192,146 +190,148 @@ private void loadCovers() {
         loadCoversFromApi();
     }
     
+    private void loadCoversFromApi() {
+        String userId = userPreferences.getZoteroUserId();
+        String apiKey = userPreferences.getZoteroApiKey();
+        String collectionKey = userPreferences.getSelectedCollectionKey();
 
-private void loadCoversFromApi() {
-    String userId = userPreferences.getZoteroUserId();
-    String apiKey = userPreferences.getZoteroApiKey();
-    String collectionKey = userPreferences.getSelectedCollectionKey();
+        // Use the new method that fetches both EPUB and PDF items with metadata
+        zoteroApiClient.getEbookItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
+            @Override
+            public void onSuccess(List<ZoteroItem> zoteroItems) {
+                processZoteroItems(zoteroItems);
+            }
 
-    // Use the new method that fetches both EPUB and PDF items with metadata
-    zoteroApiClient.getEbookItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
-        @Override
-        public void onSuccess(List<ZoteroItem> zoteroItems) {
-            processZoteroItems(zoteroItems);
-        }
-
-        @Override
-        public void onError(String errorMessage) {
-            runOnUiThread(() -> {
-                // If API fails but we have cached data, show that
-                coverRepository.hasCachedCovers(hasCovers -> {
-                    if (hasCovers) {
-                        loadCachedCovers();
-                        Toast.makeText(MainActivity.this, 
-                                "Failed to update from Zotero: " + errorMessage, 
-                                Toast.LENGTH_LONG).show();
-                    } else {
-                        showEmptyState("Error: " + errorMessage);
-                        swipeRefreshLayout.setRefreshing(false);
-                    }
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    // If API fails but we have cached data, show that
+                    coverRepository.hasCachedCovers(hasCovers -> {
+                        if (hasCovers) {
+                            loadCachedCovers();
+                            Toast.makeText(MainActivity.this, 
+                                    "Failed to update from Zotero: " + errorMessage, 
+                                    Toast.LENGTH_LONG).show();
+                        } else {
+                            showEmptyState("Error: " + errorMessage);
+                            swipeRefreshLayout.setRefreshing(false);
+                        }
+                    });
                 });
-            });
-        }
-    });
+            }
+        });
     }
 
     private void processZoteroItems(List<ZoteroItem> zoteroItems) {
-    if (zoteroItems.isEmpty()) {
-        runOnUiThread(() -> {
-            showEmptyState("No EPUB or PDF files found in your Zotero library");
-            swipeRefreshLayout.setRefreshing(false);
-        });
-        return;
+        if (zoteroItems.isEmpty()) {
+            runOnUiThread(() -> {
+                showEmptyState("No EPUB or PDF files found in your Zotero library");
+                swipeRefreshLayout.setRefreshing(false);
+            });
+            return;
+        }
+
+        // Process each Zotero item that has ebooks
+        List<EpubCoverItem> newCoverItems = new ArrayList<>();
+        
+        for (ZoteroItem item : zoteroItems) {
+            // Use the new downloadEbook method instead of downloadEpub
+            zoteroApiClient.downloadEbook(item, new ZoteroApiClient.FileCallback() {
+                @Override
+                public void onFileDownloaded(ZoteroItem item, String filePath) {
+                    // Extract cover from the ebook file using the new universal extractor
+                    CoverExtractor.extractCover(filePath, new CoverExtractor.CoverCallback() {
+                        @Override
+                        public void onCoverExtracted(String coverPath) {
+                            EpubCoverItem coverItem = new EpubCoverItem(
+                                    item.getKey(),
+                                    item.getTitle(),
+                                    coverPath,
+                                    item.getAuthors(),
+                                    userPreferences.getZoteroUsername()
+                            );
+                            
+                            newCoverItems.add(coverItem);
+                            
+                            // Update UI when all items are processed
+                            if (newCoverItems.size() == zoteroItems.size()) {
+                                // Save the covers to local database
+                                coverRepository.saveCovers(newCoverItems);
+                                updateUI(newCoverItems);
+                            }
+                        }
+
+                        @Override
+                        public void onError(String errorMessage) {
+                            // If cover extraction fails, still add the item but with a placeholder
+                            EpubCoverItem coverItem = new EpubCoverItem(
+                                    item.getKey(),
+                                    item.getTitle(),
+                                    null, // null cover path will show placeholder
+                                    item.getAuthors(),
+                                    userPreferences.getZoteroUsername()
+                            );
+                            
+                            newCoverItems.add(coverItem);
+                            
+                            // Update UI when all items are processed
+                            if (newCoverItems.size() == zoteroItems.size()) {
+                                // Save the covers to local database
+                                coverRepository.saveCovers(newCoverItems);
+                                updateUI(newCoverItems);
+                            }
+                        }
+                    });
+                }
+                
+                @Override
+                public void onError(ZoteroItem item, String errorMessage) {
+                    // If download fails, still add the item but with error info and placeholder
+                    EpubCoverItem coverItem = new EpubCoverItem(
+                            item.getKey(),
+                            item.getTitle() + " (Download failed)",
+                            null, // null cover path will show placeholder
+                            item.getAuthors(),
+                            userPreferences.getZoteroUsername()
+                    );
+                    
+                    newCoverItems.add(coverItem);
+                    
+                    // Update UI when all items are processed
+                    if (newCoverItems.size() == zoteroItems.size()) {
+                        // Save the covers to local database
+                        coverRepository.saveCovers(newCoverItems);
+                        updateUI(newCoverItems);
+                    }
+                }
+            });
+        }
     }
 
-    // Process each Zotero item that has ebooks
-    List<EpubCoverItem> newCoverItems = new ArrayList<>();
-    
-    for (ZoteroItem item : zoteroItems) {
-        // Use the new downloadEbook method instead of downloadEpub
-        zoteroApiClient.downloadEbook(item, new ZoteroApiClient.FileCallback() {
-            @Override
-            public void onFileDownloaded(ZoteroItem item, String filePath) {
-                // Extract cover from the ebook file using the new universal extractor
-                CoverExtractor.extractCover(filePath, new CoverExtractor.CoverCallback() {
-                    @Override
-                    public void onCoverExtracted(String coverPath) {
-                        EpubCoverItem coverItem = new EpubCoverItem(
-                                item.getKey(),
-                                item.getTitle(),
-                                coverPath,
-                                item.getAuthors(),
-                                userPreferences.getZoteroUsername()
-                        );
-                        
-                        newCoverItems.add(coverItem);
-                        
-                        // Update UI when all items are processed
-                        if (newCoverItems.size() == zoteroItems.size()) {
-                            // Save the covers to local database
-                            coverRepository.saveCovers(newCoverItems);
-                            updateUI(newCoverItems);
-                        }
-                    }
-
-                    @Override
-                    public void onError(String errorMessage) {
-                        // If cover extraction fails, still add the item but with a placeholder
-                        EpubCoverItem coverItem = new EpubCoverItem(
-                                item.getKey(),
-                                item.getTitle(),
-                                null, // null cover path will show placeholder
-                                item.getAuthors(),
-                                userPreferences.getZoteroUsername()
-                        );
-                        
-                        newCoverItems.add(coverItem);
-                        
-                        // Update UI when all items are processed
-                        if (newCoverItems.size() == zoteroItems.size()) {
-                            // Save the covers to local database
-                            coverRepository.saveCovers(newCoverItems);
-                            updateUI(newCoverItems);
-                        }
-                    }
-                });
+    private void updateUI(final List<EpubCoverItem> newItems) {
+        runOnUiThread(() -> {
+            coverItems.clear();
+            coverItems.addAll(newItems);
+            
+            // Sort the covers according to user preference
+            int sortMode = userPreferences.getSortMode();
+            CoverSorter.sortCovers(coverItems, sortMode);
+            
+            // Re-create the adapter with the current display mode
+            int displayMode = userPreferences.getDisplayMode();
+            adapter = new CoverGridAdapter(this, coverItems, this, displayMode);
+            recyclerView.setAdapter(adapter);
+            
+            if (coverItems.isEmpty()) {
+                showEmptyState("No EPUB files found");
+            } else {
+                hideEmptyState();
             }
             
-            @Override
-            public void onError(ZoteroItem item, String errorMessage) {
-                // If download fails, still add the item but with error info and placeholder
-                EpubCoverItem coverItem = new EpubCoverItem(
-                        item.getKey(),
-                        item.getTitle() + " (Download failed)",
-                        null, // null cover path will show placeholder
-                        item.getAuthors(),
-                        userPreferences.getZoteroUsername()
-                );
-                
-                newCoverItems.add(coverItem);
-                
-                // Update UI when all items are processed
-                if (newCoverItems.size() == zoteroItems.size()) {
-                    // Save the covers to local database
-                    coverRepository.saveCovers(newCoverItems);
-                    updateUI(newCoverItems);
-                }
-            }
+            progressBar.setVisibility(View.GONE);
+            swipeRefreshLayout.setRefreshing(false);
         });
     }
-    }
-
-private void updateUI(final List<EpubCoverItem> newItems) {
-    runOnUiThread(() -> {
-        coverItems.clear();
-        coverItems.addAll(newItems);
-        
-        // Re-create the adapter with the current display mode
-        int displayMode = userPreferences.getDisplayMode();
-        adapter = new CoverGridAdapter(this, coverItems, this, displayMode);
-        recyclerView.setAdapter(adapter);
-        
-        if (coverItems.isEmpty()) {
-            showEmptyState("No EPUB files found");
-        } else {
-            hideEmptyState();
-        }
-        
-        progressBar.setVisibility(View.GONE);
-        swipeRefreshLayout.setRefreshing(false);
-    });
-}
-
 
     private void showLoading() {
         progressBar.setVisibility(View.VISIBLE);
@@ -350,93 +350,134 @@ private void updateUI(final List<EpubCoverItem> newItems) {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-    getMenuInflater().inflate(R.menu.main_menu, menu);
-    
-    // Set the checkable state for file type toggles
-    MenuItem epubToggle = menu.findItem(R.id.action_toggle_epubs);
-    MenuItem pdfToggle = menu.findItem(R.id.action_toggle_pdfs);
-    
-    if (epubToggle != null) {
-        epubToggle.setChecked(userPreferences.getShowEpubs());
-    }
-    if (pdfToggle != null) {
-        pdfToggle.setChecked(userPreferences.getShowPdfs());
-    }
-    
-    return true;
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        
+        // Set the checkable state for file type toggles
+        MenuItem epubToggle = menu.findItem(R.id.action_toggle_epubs);
+        MenuItem pdfToggle = menu.findItem(R.id.action_toggle_pdfs);
+        
+        if (epubToggle != null) {
+            epubToggle.setChecked(userPreferences.getShowEpubs());
+        }
+        if (pdfToggle != null) {
+            pdfToggle.setChecked(userPreferences.getShowPdfs());
+        }
+        
+        return true;
     }
     
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-    // Update the checkable state every time the menu is shown
-    MenuItem epubToggle = menu.findItem(R.id.action_toggle_epubs);
-    MenuItem pdfToggle = menu.findItem(R.id.action_toggle_pdfs);
-    
-    if (epubToggle != null) {
-        epubToggle.setChecked(userPreferences.getShowEpubs());
-    }
-    if (pdfToggle != null) {
-        pdfToggle.setChecked(userPreferences.getShowPdfs());
-    }
-    
-    return super.onPrepareOptionsMenu(menu);
+        // Update the checkable state every time the menu is shown
+        MenuItem epubToggle = menu.findItem(R.id.action_toggle_epubs);
+        MenuItem pdfToggle = menu.findItem(R.id.action_toggle_pdfs);
+        
+        if (epubToggle != null) {
+            epubToggle.setChecked(userPreferences.getShowEpubs());
+        }
+        if (pdfToggle != null) {
+            pdfToggle.setChecked(userPreferences.getShowPdfs());
+        }
+        
+        return super.onPrepareOptionsMenu(menu);
     }
     
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-    switch (item.getItemId()) {
-        case R.id.action_settings:
-            startActivity(new Intent(this, SettingsActivity.class));
-            return true;
-        case R.id.action_refresh:
-            if (!NetworkUtils.isNetworkAvailable(this)) {
-                Toast.makeText(this, "No internet connection available", Toast.LENGTH_SHORT).show();
-            } else {
-                refreshCovers();
-            }
-            return true;
-        case R.id.action_info:
-            showInfoDialog();
-            return true;
-        case R.id.action_select_collection:
-            showCollectionSelector();
-            return true;
-        case R.id.action_change_display:
-            showDisplayModeDialog();
-            return true;
-        case R.id.action_toggle_epubs:
-            toggleEpubsEnabled(item);
-            return true;
-        case R.id.action_toggle_pdfs:
-            togglePdfsEnabled(item);
-            return true;
-        default:
-            return super.onOptionsItemSelected(item);
+        switch (item.getItemId()) {
+            case R.id.action_settings:
+                startActivity(new Intent(this, SettingsActivity.class));
+                return true;
+            case R.id.action_refresh:
+                if (!NetworkUtils.isNetworkAvailable(this)) {
+                    Toast.makeText(this, "No internet connection available", Toast.LENGTH_SHORT).show();
+                } else {
+                    refreshCovers();
+                }
+                return true;
+            case R.id.action_info:
+                showInfoDialog();
+                return true;
+            case R.id.action_select_collection:
+                showCollectionSelector();
+                return true;
+            case R.id.action_change_display:
+                showDisplayModeDialog();
+                return true;
+            case R.id.action_sort:
+                showSortModeDialog();
+                return true;
+            case R.id.action_toggle_epubs:
+                toggleEpubsEnabled(item);
+                return true;
+            case R.id.action_toggle_pdfs:
+                togglePdfsEnabled(item);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
+
+    private void showSortModeDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.sort_mode_title);
+        
+        String[] options = {getString(R.string.sort_by_title), getString(R.string.sort_by_author)};
+        int currentMode = userPreferences.getSortMode();
+        
+        builder.setSingleChoiceItems(options, currentMode, (dialog, which) -> {
+            userPreferences.setSortMode(which);
+            dialog.dismiss();
+            
+            // Sort and refresh the current list
+            sortAndRefreshCovers();
+        });
+        
+        builder.setNegativeButton(R.string.cancel, (dialog, which) -> dialog.dismiss());
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void sortAndRefreshCovers() {
+        if (coverItems != null && !coverItems.isEmpty()) {
+            int sortMode = userPreferences.getSortMode();
+            CoverSorter.sortCovers(coverItems, sortMode);
+            
+            // Refresh the adapter
+            int displayMode = userPreferences.getDisplayMode();
+            adapter = new CoverGridAdapter(this, coverItems, this, displayMode);
+            recyclerView.setAdapter(adapter);
+            
+            // Show a brief message indicating the sort mode
+            String sortMessage = sortMode == UserPreferences.SORT_BY_AUTHOR ? 
+                "Sorted by Author" : "Sorted by Title";
+            Toast.makeText(this, sortMessage, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void toggleEpubsEnabled(MenuItem item) {
-    boolean currentState = userPreferences.getShowEpubs();
-    boolean newState = !currentState;
-    
-    // Don't allow disabling if it's the only enabled type
-    if (!newState && !userPreferences.getShowPdfs()) {
-        Toast.makeText(this, "At least one file type must be enabled", Toast.LENGTH_SHORT).show();
-        return;
-    }
-    
-    userPreferences.setShowEpubs(newState);
-    item.setChecked(newState);
-    
-    // Clear cache and reload
-    coverRepository.clearCovers();
-    Toast.makeText(this, newState ? "EPUBs enabled" : "EPUBs disabled", Toast.LENGTH_SHORT).show();
-    
-    if (NetworkUtils.isNetworkAvailable(this)) {
-        loadCoversFromApi();
-    } else {
-        loadCovers(); // This will handle offline mode appropriately
-    }
+        boolean currentState = userPreferences.getShowEpubs();
+        boolean newState = !currentState;
+        
+        // Don't allow disabling if it's the only enabled type
+        if (!newState && !userPreferences.getShowPdfs()) {
+            Toast.makeText(this, "At least one file type must be enabled", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        userPreferences.setShowEpubs(newState);
+        item.setChecked(newState);
+        
+        // Clear cache and reload
+        coverRepository.clearCovers();
+        Toast.makeText(this, newState ? "EPUBs enabled" : "EPUBs disabled", Toast.LENGTH_SHORT).show();
+        
+        if (NetworkUtils.isNetworkAvailable(this)) {
+            loadCoversFromApi();
+        } else {
+            loadCovers(); // This will handle offline mode appropriately
+        }
     }
 
     private void showInfoDialog() {
@@ -455,68 +496,67 @@ private void updateUI(final List<EpubCoverItem> newItems) {
     }
 
     private void togglePdfsEnabled(MenuItem item) {
-    boolean currentState = userPreferences.getShowPdfs();
-    boolean newState = !currentState;
-    
-    // Don't allow disabling if it's the only enabled type
-    if (!newState && !userPreferences.getShowEpubs()) {
-        Toast.makeText(this, "At least one file type must be enabled", Toast.LENGTH_SHORT).show();
-        return;
-    }
-    
-    userPreferences.setShowPdfs(newState);
-    item.setChecked(newState);
-    
-    // Clear cache and reload
-    coverRepository.clearCovers();
-    Toast.makeText(this, newState ? "PDFs enabled" : "PDFs disabled", Toast.LENGTH_SHORT).show();
-    
-    if (NetworkUtils.isNetworkAvailable(this)) {
-        loadCoversFromApi();
-    } else {
-        loadCovers(); // This will handle offline mode appropriately
-    }
+        boolean currentState = userPreferences.getShowPdfs();
+        boolean newState = !currentState;
+        
+        // Don't allow disabling if it's the only enabled type
+        if (!newState && !userPreferences.getShowEpubs()) {
+            Toast.makeText(this, "At least one file type must be enabled", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        userPreferences.setShowPdfs(newState);
+        item.setChecked(newState);
+        
+        // Clear cache and reload
+        coverRepository.clearCovers();
+        Toast.makeText(this, newState ? "PDFs enabled" : "PDFs disabled", Toast.LENGTH_SHORT).show();
+        
+        if (NetworkUtils.isNetworkAvailable(this)) {
+            loadCoversFromApi();
+        } else {
+            loadCovers(); // This will handle offline mode appropriately
+        }
     }
 
     @Override
     protected void onResume() {
-    super.onResume();
-    
-    // Check if we need to reload due to settings changes
-    boolean needsReload = false;
-    
-    // If credentials are available but we have no covers, reload
-    if (userPreferences.hasZoteroCredentials() && coverItems.isEmpty()) {
-        needsReload = true;
+        super.onResume();
+        
+        // Check if we need to reload due to settings changes
+        boolean needsReload = false;
+        
+        // If credentials are available but we have no covers, reload
+        if (userPreferences.hasZoteroCredentials() && coverItems.isEmpty()) {
+            needsReload = true;
+        }
+        
+        // If file type preferences changed, we should reload
+        // (This is a simple approach - you could also store the previous preferences and compare)
+        if (!coverItems.isEmpty() && userPreferences.hasZoteroCredentials()) {
+            // Clear cache when returning from settings to ensure file type changes take effect
+            coverRepository.clearCovers();
+            needsReload = true;
+        }
+        
+        if (needsReload) {
+            loadCovers();
+        }
+        
+        // Always update the title in case collection selection changed
+        updateTitle();
     }
-    
-    // If file type preferences changed, we should reload
-    // (This is a simple approach - you could also store the previous preferences and compare)
-    if (!coverItems.isEmpty() && userPreferences.hasZoteroCredentials()) {
-        // Clear cache when returning from settings to ensure file type changes take effect
-        coverRepository.clearCovers();
-        needsReload = true;
-    }
-    
-    if (needsReload) {
-        loadCovers();
-    }
-    
-    // Always update the title in case collection selection changed
-    updateTitle();
-    }
-
     
     private void updateTitle() {
         if (getSupportActionBar() != null) {
-        String collectionName = userPreferences.getSelectedCollectionName();
-        if (collectionName == null || collectionName.isEmpty()) {
-            collectionName = "All Collections";
+            String collectionName = userPreferences.getSelectedCollectionName();
+            if (collectionName == null || collectionName.isEmpty()) {
+                collectionName = "All Collections";
+            }
+            getSupportActionBar().setSubtitle(collectionName + 
+                    (isOfflineMode ? " (Offline)" : ""));
         }
-        getSupportActionBar().setSubtitle(collectionName + 
-                (isOfflineMode ? " (Offline)" : ""));
     }
-}
 
     @Override
     public void onCoverClick(EpubCoverItem item) {
@@ -537,61 +577,60 @@ private void updateUI(final List<EpubCoverItem> newItems) {
     }
 
     private void showCollectionSelector() {
-    if (!userPreferences.hasZoteroCredentials()) {
-        Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
-        return;
+        if (!userPreferences.hasZoteroCredentials()) {
+            Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (!NetworkUtils.isNetworkAvailable(this)) {
+            Toast.makeText(this, "No internet connection. Cannot fetch collections.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        
+        // Launch the collection tree activity
+        Intent intent = new Intent(this, CollectionTreeActivity.class);
+        startActivityForResult(intent, REQUEST_CODE_SELECT_COLLECTION);
     }
-    
-    if (!NetworkUtils.isNetworkAvailable(this)) {
-        Toast.makeText(this, "No internet connection. Cannot fetch collections.", Toast.LENGTH_LONG).show();
-        return;
-    }
-    
-    // Launch the collection tree activity
-    Intent intent = new Intent(this, CollectionTreeActivity.class);
-    startActivityForResult(intent, REQUEST_CODE_SELECT_COLLECTION);
-}
 
-@Override
-protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-    super.onActivityResult(requestCode, resultCode, data);
-    
-    if (requestCode == REQUEST_CODE_SELECT_COLLECTION && resultCode == RESULT_OK) {
-        // Collection was selected, update the UI
-        updateTitle();
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         
-        // Clear the cache when switching collections
-        coverRepository.clearCovers();
-        
-        // Reload covers with the new collection
-        if (NetworkUtils.isNetworkAvailable(this)) {
-            loadCoversFromApi();
-        } else {
-            Toast.makeText(this, "No internet connection. Cannot load new collection.", Toast.LENGTH_LONG).show();
+        if (requestCode == REQUEST_CODE_SELECT_COLLECTION && resultCode == RESULT_OK) {
+            // Collection was selected, update the UI
+            updateTitle();
+            
+            // Clear the cache when switching collections
+            coverRepository.clearCovers();
+            
+            // Reload covers with the new collection
+            if (NetworkUtils.isNetworkAvailable(this)) {
+                loadCoversFromApi();
+            } else {
+                Toast.makeText(this, "No internet connection. Cannot load new collection.", Toast.LENGTH_LONG).show();
+            }
         }
     }
-}
 
-private void showDisplayModeDialog() {
-    AlertDialog.Builder builder = new AlertDialog.Builder(this);
-    builder.setTitle("Display Mode");
-    
-    String[] options = {"Title only", "Author only", "Author - Title"};
-    int currentMode = userPreferences.getDisplayMode();
-    
-    builder.setSingleChoiceItems(options, currentMode, (dialog, which) -> {
-        userPreferences.setDisplayMode(which);
-        dialog.dismiss();
+    private void showDisplayModeDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Display Mode");
         
-        // Refresh the adapter to show the new display mode
-        adapter = new CoverGridAdapter(this, coverItems, this, which);
-        recyclerView.setAdapter(adapter);
-    });
-    
-    builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
-    
-    AlertDialog dialog = builder.create();
-    dialog.show();
-}
-
+        String[] options = {"Title only", "Author only", "Author - Title"};
+        int currentMode = userPreferences.getDisplayMode();
+        
+        builder.setSingleChoiceItems(options, currentMode, (dialog, which) -> {
+            userPreferences.setDisplayMode(which);
+            dialog.dismiss();
+            
+            // Refresh the adapter to show the new display mode
+            adapter = new CoverGridAdapter(this, coverItems, this, which);
+            recyclerView.setAdapter(adapter);
+        });
+        
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
 }
