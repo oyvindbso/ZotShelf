@@ -190,47 +190,37 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         loadCoversFromApi();
     }
     
-    private void loadCoversFromApi() {
-        String userId = userPreferences.getZoteroUserId();
-        String apiKey = userPreferences.getZoteroApiKey();
-        String collectionKey = userPreferences.getSelectedCollectionKey();
+private void loadCoversFromApi() {
+    String userId = userPreferences.getZoteroUserId();
+    String apiKey = userPreferences.getZoteroApiKey();
+    String collectionKey = userPreferences.getSelectedCollectionKey();
 
-        // Use the new method that fetches both EPUB and PDF items with metadata
-        zoteroApiClient.getEbookItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
-            @Override
-            public void onSuccess(List<ZoteroItem> zoteroItems) {
-                processZoteroItems(zoteroItems);
-            }
-
-            @Override
-            public void onError(String errorMessage) {
-                runOnUiThread(() -> {
-                    // If API fails but we have cached data, show that
-                    coverRepository.hasCachedCovers(hasCovers -> {
-                        if (hasCovers) {
-                            loadCachedCovers();
-                            Toast.makeText(MainActivity.this, 
-                                    "Failed to update from Zotero: " + errorMessage, 
-                                    Toast.LENGTH_LONG).show();
-                        } else {
-                            showEmptyState("Error: " + errorMessage);
-                            swipeRefreshLayout.setRefreshing(false);
-                        }
-                    });
-                });
-            }
-        });
-    }
-
-    private void processZoteroItems(List<ZoteroItem> zoteroItems) {
-        if (zoteroItems.isEmpty()) {
-            runOnUiThread(() -> {
-                showEmptyState("No EPUB or PDF files found in your Zotero library");
-                swipeRefreshLayout.setRefreshing(false);
-            });
-            return;
+    // Use the method that fetches items with metadata and applies all filtering
+    zoteroApiClient.getEbookItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
+        @Override
+        public void onSuccess(List<ZoteroItem> zoteroItems) {
+            processZoteroItems(zoteroItems);
         }
 
+        @Override
+        public void onError(String errorMessage) {
+            runOnUiThread(() -> {
+                // If API fails but we have cached data, show that
+                coverRepository.hasCachedCovers(hasCovers -> {
+                    if (hasCovers) {
+                        loadCachedCovers();
+                        Toast.makeText(MainActivity.this, 
+                                "Failed to update from Zotero: " + errorMessage, 
+                                Toast.LENGTH_LONG).show();
+                    } else {
+                        showEmptyState("Error: " + errorMessage);
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                });
+            });
+        }
+    });
+}
         // Process each Zotero item that has ebooks
         List<EpubCoverItem> newCoverItems = new ArrayList<>();
         

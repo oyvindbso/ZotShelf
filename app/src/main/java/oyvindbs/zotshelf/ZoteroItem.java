@@ -129,7 +129,9 @@ public class ZoteroItem {
     public boolean isBook() {
         String parentType = getParentItemType();
         if (parentType == null) {
-            return false; // If no parent, we can't determine if it's a book
+            // If no parent, assume it could be a standalone book
+            // (some books might not have parent items)
+            return true;
         }
         
         // Zotero item types that typically represent books
@@ -139,7 +141,8 @@ public class ZoteroItem {
                parentType.equals("dictionaryEntry") ||
                parentType.equals("manuscript") ||
                parentType.equals("thesis") ||
-               parentType.equals("report"); // Some reports might be book-like
+               parentType.equals("report") ||
+               parentType.equals("document"); // Some documents might be books
     }
     
     /**
@@ -159,7 +162,10 @@ public class ZoteroItem {
                parentType.equals("conferencePaper") ||
                parentType.equals("preprint") ||
                parentType.equals("blogPost") ||
-               parentType.equals("forumPost");
+               parentType.equals("forumPost") ||
+               parentType.equals("patent") ||
+               parentType.equals("case") ||
+               parentType.equals("statute");
     }
     
     public String getAuthors() {
