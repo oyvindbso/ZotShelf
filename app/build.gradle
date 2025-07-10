@@ -16,8 +16,8 @@ android {
         applicationId "oyvindbs.zotshelf"
         minSdk 23
         targetSdk 34
-        versionCode 11
-        versionName "1.1"
+        versionCode 11cb
+        versionName "1.1cb"
     }
 
     testOptions {
