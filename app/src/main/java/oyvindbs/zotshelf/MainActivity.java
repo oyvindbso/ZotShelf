@@ -189,38 +189,48 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         
         loadCoversFromApi();
     }
-    
-private void loadCoversFromApi() {
-    String userId = userPreferences.getZoteroUserId();
-    String apiKey = userPreferences.getZoteroApiKey();
-    String collectionKey = userPreferences.getSelectedCollectionKey();
 
-    // Use the method that fetches items with metadata and applies all filtering
-    zoteroApiClient.getEbookItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
-        @Override
-        public void onSuccess(List<ZoteroItem> zoteroItems) {
-            processZoteroItems(zoteroItems);
-        }
+    private void loadCoversFromApi() {
+        String userId = userPreferences.getZoteroUserId();
+        String apiKey = userPreferences.getZoteroApiKey();
+        String collectionKey = userPreferences.getSelectedCollectionKey();
 
-        @Override
-        public void onError(String errorMessage) {
-            runOnUiThread(() -> {
-                // If API fails but we have cached data, show that
-                coverRepository.hasCachedCovers(hasCovers -> {
-                    if (hasCovers) {
-                        loadCachedCovers();
-                        Toast.makeText(MainActivity.this, 
-                                "Failed to update from Zotero: " + errorMessage, 
-                                Toast.LENGTH_LONG).show();
-                    } else {
-                        showEmptyState("Error: " + errorMessage);
-                        swipeRefreshLayout.setRefreshing(false);
-                    }
+        // Use the method that fetches items with metadata and applies all filtering
+        zoteroApiClient.getEbookItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
+            @Override
+            public void onSuccess(List<ZoteroItem> zoteroItems) {
+                processZoteroItems(zoteroItems);
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    // If API fails but we have cached data, show that
+                    coverRepository.hasCachedCovers(hasCovers -> {
+                        if (hasCovers) {
+                            loadCachedCovers();
+                            Toast.makeText(MainActivity.this, 
+                                    "Failed to update from Zotero: " + errorMessage, 
+                                    Toast.LENGTH_LONG).show();
+                        } else {
+                            showEmptyState("Error: " + errorMessage);
+                            swipeRefreshLayout.setRefreshing(false);
+                        }
+                    });
                 });
+            }
+        });
+    }
+
+    private void processZoteroItems(List<ZoteroItem> zoteroItems) {
+        if (zoteroItems.isEmpty()) {
+            runOnUiThread(() -> {
+                showEmptyState("No EPUB or PDF files found in your Zotero library");
+                swipeRefreshLayout.setRefreshing(false);
             });
+            return;
         }
-    });
-}
+
         // Process each Zotero item that has ebooks
         List<EpubCoverItem> newCoverItems = new ArrayList<>();
         
@@ -302,10 +312,6 @@ private void loadCoversFromApi() {
         runOnUiThread(() -> {
             coverItems.clear();
             coverItems.addAll(newItems);
-            
-            // Sort the covers according to user preference
-            int sortMode = userPreferences.getSortMode();
-            CoverSorter.sortCovers(coverItems, sortMode);
             
             // Re-create the adapter with the current display mode
             int displayMode = userPreferences.getDisplayMode();
@@ -394,9 +400,6 @@ private void loadCoversFromApi() {
             case R.id.action_change_display:
                 showDisplayModeDialog();
                 return true;
-            case R.id.action_sort:
-                showSortModeDialog();
-                return true;
             case R.id.action_toggle_epubs:
                 toggleEpubsEnabled(item);
                 return true;
@@ -405,44 +408,6 @@ private void loadCoversFromApi() {
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
-        }
-    }
-
-    private void showSortModeDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(R.string.sort_mode_title);
-        
-        String[] options = {getString(R.string.sort_by_title), getString(R.string.sort_by_author)};
-        int currentMode = userPreferences.getSortMode();
-        
-        builder.setSingleChoiceItems(options, currentMode, (dialog, which) -> {
-            userPreferences.setSortMode(which);
-            dialog.dismiss();
-            
-            // Sort and refresh the current list
-            sortAndRefreshCovers();
-        });
-        
-        builder.setNegativeButton(R.string.cancel, (dialog, which) -> dialog.dismiss());
-        
-        AlertDialog dialog = builder.create();
-        dialog.show();
-    }
-
-    private void sortAndRefreshCovers() {
-        if (coverItems != null && !coverItems.isEmpty()) {
-            int sortMode = userPreferences.getSortMode();
-            CoverSorter.sortCovers(coverItems, sortMode);
-            
-            // Refresh the adapter
-            int displayMode = userPreferences.getDisplayMode();
-            adapter = new CoverGridAdapter(this, coverItems, this, displayMode);
-            recyclerView.setAdapter(adapter);
-            
-            // Show a brief message indicating the sort mode
-            String sortMessage = sortMode == UserPreferences.SORT_BY_AUTHOR ? 
-                "Sorted by Author" : "Sorted by Title";
-            Toast.makeText(this, sortMessage, Toast.LENGTH_SHORT).show();
         }
     }
 
