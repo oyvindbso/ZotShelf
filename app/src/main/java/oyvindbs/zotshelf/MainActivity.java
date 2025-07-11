@@ -61,7 +61,8 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
 
         // Initialize Zotero API client
         zoteroApiClient = new ZoteroApiClient(this);
-
+        // dette sletter ubrukte covere:
+        zoteroApiClient.cleanupOldFiles(30);    
         // Setup refresh listener
         swipeRefreshLayout.setOnRefreshListener(this::refreshCovers);
         
