@@ -191,37 +191,43 @@ public class MainActivity extends AppCompatActivity implements CoverGridAdapter.
         loadCoversFromApi();
     }
 
-    private void loadCoversFromApi() {
-        String userId = userPreferences.getZoteroUserId();
-        String apiKey = userPreferences.getZoteroApiKey();
-        String collectionKey = userPreferences.getSelectedCollectionKey();
+// Replace the loadCoversFromApi method in MainActivity.java
 
-        // Use the method that fetches items with metadata and applies all filtering
-        zoteroApiClient.getEbookItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
-            @Override
-            public void onSuccess(List<ZoteroItem> zoteroItems) {
-                processZoteroItems(zoteroItems);
-            }
+private void loadCoversFromApi() {
+    String userId = userPreferences.getZoteroUserId();
+    String apiKey = userPreferences.getZoteroApiKey();
+    String collectionKey = userPreferences.getSelectedCollectionKey();
 
-            @Override
-            public void onError(String errorMessage) {
-                runOnUiThread(() -> {
-                    // If API fails but we have cached data, show that
-                    coverRepository.hasCachedCovers(hasCovers -> {
-                        if (hasCovers) {
-                            loadCachedCovers();
-                            Toast.makeText(MainActivity.this, 
-                                    "Failed to update from Zotero: " + errorMessage, 
-                                    Toast.LENGTH_LONG).show();
-                        } else {
-                            showEmptyState("Error: " + errorMessage);
-                            swipeRefreshLayout.setRefreshing(false);
-                        }
-                    });
+    Log.d("MainActivity", "Loading covers from API - Collection: " + collectionKey);
+
+    // Use the new paginated method that fetches ALL items
+    zoteroApiClient.getAllEbookItemsWithMetadata(userId, apiKey, collectionKey, new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
+        @Override
+        public void onSuccess(List<ZoteroItem> zoteroItems) {
+            Log.d("MainActivity", "Received " + zoteroItems.size() + " items from API");
+            processZoteroItems(zoteroItems);
+        }
+
+        @Override
+        public void onError(String errorMessage) {
+            Log.e("MainActivity", "Error loading covers: " + errorMessage);
+            runOnUiThread(() -> {
+                // If API fails but we have cached data, show that
+                coverRepository.hasCachedCovers(hasCovers -> {
+                    if (hasCovers) {
+                        loadCachedCovers();
+                        Toast.makeText(MainActivity.this, 
+                                "Failed to update from Zotero: " + errorMessage, 
+                                Toast.LENGTH_LONG).show();
+                    } else {
+                        showEmptyState("Error: " + errorMessage);
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
                 });
-            }
-        });
-    }
+            });
+        }
+    });
+}
 
     private void processZoteroItems(List<ZoteroItem> zoteroItems) {
         if (zoteroItems.isEmpty()) {
