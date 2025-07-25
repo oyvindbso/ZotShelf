@@ -62,7 +62,6 @@ import java.util.concurrent.Executors;
     try {
     List<EpubCoverEntity> entities = new ArrayList<>();
     
-    ```
          for (int i = 0; i < items.size() && i < coverPaths.size(); i++) {
              ZoteroItem item = items.get(i);
              String coverPath = coverPaths.get(i);
@@ -75,7 +74,6 @@ import java.util.concurrent.Executors;
      } catch (Exception e) {
          Log.e(TAG, "Error saving covers", e);
      }
-    ```
     
     });
     }
@@ -115,13 +113,11 @@ import java.util.concurrent.Executors;
     List<EpubCoverEntity> entities = getFilteredEntities();
     List<EpubCoverItem> coverItems = convertEntitiesToCoverItems(entities);
     
-    ```
          mainHandler.post(() -> callback.onCoversLoaded(coverItems));
      } catch (Exception e) {
          Log.e(TAG, "Error loading filtered covers", e);
          mainHandler.post(() -> callback.onError("Error loading covers: " + e.getMessage()));
      }
-    ```
     
     });
     }
@@ -166,7 +162,6 @@ import java.util.concurrent.Executors;
     }
     }
     
-    ```
      EpubCoverItem item = new EpubCoverItem(
              entity.getId(),
              entity.getTitle(),
@@ -175,7 +170,6 @@ import java.util.concurrent.Executors;
              entity.getZoteroUsername()
      );
      coverItems.add(item);
-    ```
     
     }
     
@@ -189,7 +183,6 @@ import java.util.concurrent.Executors;
     executor.execute(() -> {
     List<EpubCoverEntity> entities = new ArrayList<>();
     
-    ```
      for (EpubCoverItem item : coverItems) {
          EpubCoverEntity entity = new EpubCoverEntity(
                  item.getId(),
@@ -202,7 +195,6 @@ import java.util.concurrent.Executors;
      }
      
      database.epubCoverDao().insertAll(entities);
-    ```
     
     });
     }
@@ -243,7 +235,6 @@ import java.util.concurrent.Executors;
     try {
     long cutoffTime = System.currentTimeMillis() - (maxAgeInDays * 24 * 60 * 60 * 1000L);
     
-    ```
          // Get entities that will be deleted to clean up their files
          List<EpubCoverEntity> oldEntities = database.epubCoverDao().getCoversModifiedSince(0);
          
@@ -264,7 +255,6 @@ import java.util.concurrent.Executors;
      } catch (Exception e) {
          Log.e(TAG, "Error during cleanup", e);
      }
-    ```
     
     });
     }
