@@ -143,7 +143,7 @@ import androidx.room.PrimaryKey;
   if (collectionKeys == null || collectionKeys.isEmpty()) {
   return new java.util.ArrayList<>();
   }
-  return java.util.Arrays.asList(collectionKeys.split("\|"));
+  return java.util.Arrays.asList(collectionKeys.split("\\|"));
   }
   
   public void setCollectionKeysFromList(java.util.List<String> keys) {
