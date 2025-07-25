@@ -128,7 +128,7 @@ Call<List<ZoteroItem>> getItemsByCollectionPaginated(
     @Streaming
     Call<ResponseBody> downloadFile(@Url String fileUrl, @Header("Zotero-API-Key") String apiKey);
     
-    GET("users/{userId}/items")
+    @GET("users/{userId}/items")
 Call<List<ZoteroItem>> getItemsPaginated(
         @Path("userId") String userId,
         @Header("Zotero-API-Key") String apiKey,
