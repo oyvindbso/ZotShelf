@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 
 /**
 
-- Enhanced repository class to manage EPUB cover data with offline support
+- Simplified repository class to manage EPUB cover data with offline support
   */
   public class EpubCoverRepository {
   
@@ -55,30 +55,6 @@ import java.util.concurrent.Executors;
     }
   
   /**
-  - Save multiple covers from ZoteroItems
-    */
-    public void saveCoversFromZoteroItems(List<ZoteroItem> items, List<String> coverPaths) {
-    executor.execute(() -> {
-    try {
-    List<EpubCoverEntity> entities = new ArrayList<>();
-    
-         for (int i = 0; i < items.size() && i < coverPaths.size(); i++) {
-             ZoteroItem item = items.get(i);
-             String coverPath = coverPaths.get(i);
-             EpubCoverEntity entity = createEntityFromZoteroItem(item, coverPath);
-             entities.add(entity);
-         }
-         
-         database.epubCoverDao().insertAll(entities);
-         Log.d(TAG, "Saved " + entities.size() + " covers to database");
-     } catch (Exception e) {
-         Log.e(TAG, "Error saving covers", e);
-     }
-    
-    });
-    }
-  
-  /**
   - Create EpubCoverEntity from ZoteroItem with full metadata
     */
     private EpubCoverEntity createEntityFromZoteroItem(ZoteroItem item, String coverPath) {
@@ -110,9 +86,14 @@ import java.util.concurrent.Executors;
     public void getFilteredCovers(CoverRepositoryCallback callback) {
     executor.execute(() -> {
     try {
-    List<EpubCoverEntity> entities = getFilteredEntities();
-    List<EpubCoverItem> coverItems = convertEntitiesToCoverItems(entities);
+    // Get all covers for the current user
+    String username = userPreferences.getZoteroUsername();
+    List<EpubCoverEntity> entities = database.epubCoverDao().getCoversByPreferences(username);
     
+         // Apply filtering in memory
+         List<EpubCoverEntity> filteredEntities = applyInMemoryFiltering(entities);
+         List<EpubCoverItem> coverItems = convertEntitiesToCoverItems(filteredEntities);
+         
          mainHandler.post(() -> callback.onCoversLoaded(coverItems));
      } catch (Exception e) {
          Log.e(TAG, "Error loading filtered covers", e);
@@ -123,26 +104,58 @@ import java.util.concurrent.Executors;
     }
   
   /**
-  - Get entities filtered by current user preferences
+  - Apply user preferences filtering in memory
     */
-    private List<EpubCoverEntity> getFilteredEntities() {
+    private List<EpubCoverEntity> applyInMemoryFiltering(List<EpubCoverEntity> entities) {
     // Get user preferences
     boolean booksOnly = userPreferences.getBooksOnly();
     boolean showEpubs = userPreferences.getShowEpubs();
     boolean showPdfs = userPreferences.getShowPdfs();
     String collectionKey = userPreferences.getSelectedCollectionKey();
     
-    List<EpubCoverEntity> entities;
+    List<EpubCoverEntity> filtered = new ArrayList<>();
     
-    // Apply collection filter first
-    if (collectionKey != null && !collectionKey.isEmpty()) {
-    entities = database.epubCoverDao().getCoversByCollection(collectionKey, booksOnly, showEpubs, showPdfs);
-    } else {
-    entities = database.epubCoverDao().getCoversByPreferences(booksOnly, showEpubs, showPdfs);
+    for (EpubCoverEntity entity : entities) {
+    boolean includeItem = true;
+    
+     // Apply file type filter
+     String mimeType = entity.getMimeType();
+     if (mimeType != null) {
+         boolean isEpub = "application/epub+zip".equals(mimeType);
+         boolean isPdf = "application/pdf".equals(mimeType);
+         
+         if (isEpub && !showEpubs) {
+             includeItem = false;
+         } else if (isPdf && !showPdfs) {
+             includeItem = false;
+         } else if (!isEpub && !isPdf) {
+             // Unknown type, include by default if either type is enabled
+             includeItem = showEpubs || showPdfs;
+         }
+     }
+     
+     // Apply books-only filter
+     if (includeItem && booksOnly) {
+         // If entity has isBook data, use it; otherwise include by default
+         includeItem = entity.isBook();
+     }
+     
+     // Apply collection filter (simplified - just check if collection key is present)
+     if (includeItem && collectionKey != null && !collectionKey.isEmpty()) {
+         List<String> entityCollections = entity.getCollectionKeysAsList();
+         if (!entityCollections.isEmpty() && !entityCollections.contains(collectionKey)) {
+             includeItem = false;
+         }
+     }
+     
+     if (includeItem) {
+         filtered.add(entity);
+     }
+    
     }
     
-    Log.d(TAG, "Loaded " + entities.size() + " covers from database with filters applied");
-    return entities;
+    Log.d(TAG, "Filtered " + entities.size() + " → " + filtered.size() + " covers based on preferences");
+    return filtered;
     }
   
   /**
@@ -182,6 +195,7 @@ import java.util.concurrent.Executors;
     public void saveCovers(List<EpubCoverItem> coverItems) {
     executor.execute(() -> {
     List<EpubCoverEntity> entities = new ArrayList<>();
+    
     
      for (EpubCoverItem item : coverItems) {
          EpubCoverEntity entity = new EpubCoverEntity(
@@ -255,6 +269,7 @@ import java.util.concurrent.Executors;
      } catch (Exception e) {
          Log.e(TAG, "Error during cleanup", e);
      }
+    
     
     });
     }
