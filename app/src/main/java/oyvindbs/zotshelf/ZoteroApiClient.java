@@ -104,26 +104,7 @@ public interface ZoteroService {
             @Query("limit") int limit
     );
     
-@GET("users/{userId}/items")
-Call<List<ZoteroItem>> getItemsPaginated(
-        @Path("userId") String userId,
-        @Header("Zotero-API-Key") String apiKey,
-        @Query("format") String format,
-        @Query("itemType") String itemType,
-        @Query("start") int start,
-        @Query("limit") int limit
-);
 
-@GET("users/{userId}/collections/{collectionKey}/items")
-Call<List<ZoteroItem>> getItemsByCollectionPaginated(
-        @Path("userId") String userId,
-        @Path("collectionKey") String collectionKey,
-        @Header("Zotero-API-Key") String apiKey,
-        @Query("format") String format,
-        @Query("itemType") String itemType,
-        @Query("start") int start,
-        @Query("limit") int limit
-);
     @GET
     @Streaming
     Call<ResponseBody> downloadFile(@Url String fileUrl, @Header("Zotero-API-Key") String apiKey);
