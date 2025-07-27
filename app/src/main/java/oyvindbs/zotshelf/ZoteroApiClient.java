@@ -868,245 +868,94 @@ private void getAllEbookItemsPaginated(String userId, String apiKey, String coll
     }
 }
 
-/**
- * Updated method that gets all ebook items with metadata and pagination
- */
+// REPLACE your existing getAllEbookItemsWithMetadata method with this version:
+
 public void getAllEbookItemsWithMetadata(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
-    // Use the new paginated methods
-    ZoteroCallback<List<ZoteroItem>> ebookCallback = new ZoteroCallback<List<ZoteroItem>>() {
-        @Override
-        public void onSuccess(List<ZoteroItem> ebookItems) {
-            if (ebookItems.isEmpty()) {
-                callback.onSuccess(ebookItems);
-                return;
-            }
-            
-            Log.d(TAG, "Processing " + ebookItems.size() + " ebook items for metadata");
-            
-            // Apply books-only filter if enabled
-            UserPreferences prefs = new UserPreferences(context);
-            if (prefs.getBooksOnly()) {
-                List<ZoteroItem> bookItems = new ArrayList<>();
-                for (ZoteroItem item : ebookItems) {
-                    if (item.isBook()) {
-                        bookItems.add(item);
-                    }
-                }
-                ebookItems = bookItems;
-                Log.d(TAG, "After books-only filter: " + ebookItems.size() + " items");
-            }
-            
-            // For each ebook item, fetch its parent item if it has one
-            final List<ZoteroItem> processedItems = new ArrayList<>();
-            final int[] itemsToProcess = {ebookItems.size()};
-            
-            for (ZoteroItem ebookItem : ebookItems) {
-                String parentKey = ebookItem.getParentItemKey();
-                
-                if (parentKey != null && !parentKey.isEmpty()) {
-                    getParentItem(userId, apiKey, parentKey, new ZoteroCallback<ZoteroItem>() {
-                        @Override
-                        public void onSuccess(ZoteroItem parentItem) {
-                            ebookItem.setParentItem(parentItem);
-                            processedItems.add(ebookItem);
-                            
-                            itemsToProcess[0]--;
-                            if (itemsToProcess[0] == 0) {
-                                Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
-                                callback.onSuccess(processedItems);
-                            }
-                        }
-                        
-                        @Override
-                        public void onError(String errorMessage) {
-                            Log.e(TAG, "Error fetching parent item: " + errorMessage);
-                            processedItems.add(ebookItem);
-                            
-                            itemsToProcess[0]--;
-                            if (itemsToProcess[0] == 0) {
-                                Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
-                                callback.onSuccess(processedItems);
-                            }
-                        }
-                    });
-                } else {
-                    processedItems.add(ebookItem);
-                    
-                    itemsToProcess[0]--;
-                    if (itemsToProcess[0] == 0) {
-                        Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
-                        callback.onSuccess(processedItems);
-                    }
+// Use the existing paginated methods
+ZoteroCallback<List<ZoteroItem>> ebookCallback = new ZoteroCallback<List<ZoteroItem>>() {
+@Override
+public void onSuccess(List<ZoteroItem> ebookItems) {
+if (ebookItems.isEmpty()) {
+callback.onSuccess(ebookItems);
+return;
+}
+
+        Log.d(TAG, "Processing " + ebookItems.size() + " ebook items for metadata");
+        
+        // Apply books-only filter if enabled
+        UserPreferences prefs = new UserPreferences(context);
+        if (prefs.getBooksOnly()) {
+            List<ZoteroItem> bookItems = new ArrayList<>();
+            for (ZoteroItem item : ebookItems) {
+                if (item.isBook()) {
+                    bookItems.add(item);
                 }
             }
+            ebookItems = bookItems;
+            Log.d(TAG, "After books-only filter: " + ebookItems.size() + " items");
         }
         
-        @Override
-        public void onError(String errorMessage) {
-            callback.onError(errorMessage);
-        }
-    };
-    
-    // Use the new paginated methods
-    if (collectionKey == null || collectionKey.isEmpty()) {
-        getAllEbookItems(userId, apiKey, ebookCallback);
-    } else {
-        getAllEbookItemsByCollection(userId, apiKey, collectionKey, ebookCallback);
-    }
-}
-
-public void getAllEbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
-    executor.execute(() -> {
-        getAllEbookItemsPaginated(userId, apiKey, null, new ArrayList<>(), 0, callback);
-    });
-}
-
-/**
- * Get all ebook items by collection with pagination support
- */
-public void getAllEbookItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
-    executor.execute(() -> {
-        if (collectionKey == null || collectionKey.isEmpty()) {
-            getAllEbookItems(userId, apiKey, callback);
+        // For each ebook item, fetch its parent item if it has one
+        final List<ZoteroItem> processedItems = new ArrayList<>();
+        final int[] itemsToProcess = {ebookItems.size()};
+        
+        if (ebookItems.isEmpty()) {
+            callback.onSuccess(new ArrayList<>());
             return;
         }
-        getAllEbookItemsPaginated(userId, apiKey, collectionKey, new ArrayList<>(), 0, callback);
-    });
-}
-
-/**
- * Internal method to handle pagination recursively
- */
-private void getAllEbookItemsPaginated(String userId, String apiKey, String collectionKey, 
-                                      List<ZoteroItem> allItems, int start, 
-                                      ZoteroCallback<List<ZoteroItem>> callback) {
-    
-    Call<List<ZoteroItem>> call;
-    
-    if (collectionKey == null || collectionKey.isEmpty()) {
-        // Get all items with pagination
-        call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100);
-    } else {
-        // Get items by collection with pagination
-        call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100);
-    }
-    
-    try {
-        Response<List<ZoteroItem>> response = call.execute();
-        if (response.isSuccessful() && response.body() != null) {
-            List<ZoteroItem> items = response.body();
-            
-            // Filter items by user preferences
-            List<ZoteroItem> filteredItems = filterItemsByUserPreferences(items);
-            allItems.addAll(filteredItems);
-            
-            // If we got 100 items, there might be more - fetch next page
-            if (items.size() == 100) {
-                getAllEbookItemsPaginated(userId, apiKey, collectionKey, allItems, start + 100, callback);
-            } else {
-                // We've got all items
-                Log.d(TAG, "Fetched total of " + allItems.size() + " ebook items");
-                callback.onSuccess(allItems);
-            }
-        } else {
-            callback.onError("Failed to fetch items: " + response.code());
-        }
-    } catch (IOException e) {
-        Log.e(TAG, "API error", e);
-        callback.onError("Network error: " + e.getMessage());
-    }
-}
-
-/**
- * Get ebook items with metadata and pagination support
- */
-public void getAllEbookItemsWithMetadata(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
-    // Use the new paginated methods
-    ZoteroCallback<List<ZoteroItem>> ebookCallback = new ZoteroCallback<List<ZoteroItem>>() {
-        @Override
-        public void onSuccess(List<ZoteroItem> ebookItems) {
-            if (ebookItems.isEmpty()) {
-                callback.onSuccess(ebookItems);
-                return;
-            }
-            
-            Log.d(TAG, "Processing " + ebookItems.size() + " ebook items for metadata");
-            
-            // Apply books-only filter if enabled
-            UserPreferences prefs = new UserPreferences(context);
-            if (prefs.getBooksOnly()) {
-                List<ZoteroItem> bookItems = new ArrayList<>();
-                for (ZoteroItem item : ebookItems) {
-                    if (item.isBook()) {
-                        bookItems.add(item);
-                    }
-                }
-                ebookItems = bookItems;
-                Log.d(TAG, "After books-only filter: " + ebookItems.size() + " items");
-            }
-            
-            // For each ebook item, fetch its parent item if it has one
-            final List<ZoteroItem> processedItems = new ArrayList<>();
-            final int[] itemsToProcess = {ebookItems.size()};
-            
-            if (ebookItems.isEmpty()) {
-                callback.onSuccess(new ArrayList<>());
-                return;
-            }
-            
-            for (ZoteroItem ebookItem : ebookItems) {
-                String parentKey = ebookItem.getParentItemKey();
-                
-                if (parentKey != null && !parentKey.isEmpty()) {
-                    getParentItem(userId, apiKey, parentKey, new ZoteroCallback<ZoteroItem>() {
-                        @Override
-                        public void onSuccess(ZoteroItem parentItem) {
-                            ebookItem.setParentItem(parentItem);
-                            processedItems.add(ebookItem);
-                            
-                            itemsToProcess[0]--;
-                            if (itemsToProcess[0] == 0) {
-                                Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
-                                callback.onSuccess(processedItems);
-                            }
-                        }
-                        
-                        @Override
-                        public void onError(String errorMessage) {
-                            Log.e(TAG, "Error fetching parent item: " + errorMessage);
-                            processedItems.add(ebookItem);
-                            
-                            itemsToProcess[0]--;
-                            if (itemsToProcess[0] == 0) {
-                                Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
-                                callback.onSuccess(processedItems);
-                            }
-                        }
-                    });
-                } else {
-                    processedItems.add(ebookItem);
-                    
-                    itemsToProcess[0]--;
-                    if (itemsToProcess[0] == 0) {
-                        Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
-                        callback.onSuccess(processedItems);
-                    }
-                }
-            }
-        }
         
-        @Override
-        public void onError(String errorMessage) {
-            callback.onError(errorMessage);
+        for (ZoteroItem ebookItem : ebookItems) {
+            String parentKey = ebookItem.getParentItemKey();
+            
+            if (parentKey != null && !parentKey.isEmpty()) {
+                getParentItem(userId, apiKey, parentKey, new ZoteroCallback<ZoteroItem>() {
+                    @Override
+                    public void onSuccess(ZoteroItem parentItem) {
+                        ebookItem.setParentItem(parentItem);
+                        processedItems.add(ebookItem);
+                        
+                        itemsToProcess[0]--;
+                        if (itemsToProcess[0] == 0) {
+                            Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
+                            callback.onSuccess(processedItems);
+                        }
+                    }
+                    
+                    @Override
+                    public void onError(String errorMessage) {
+                        Log.e(TAG, "Error fetching parent item: " + errorMessage);
+                        processedItems.add(ebookItem);
+                        
+                        itemsToProcess[0]--;
+                        if (itemsToProcess[0] == 0) {
+                            Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
+                            callback.onSuccess(processedItems);
+                        }
+                    }
+                });
+            } else {
+                processedItems.add(ebookItem);
+                
+                itemsToProcess[0]--;
+                if (itemsToProcess[0] == 0) {
+                    Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
+                    callback.onSuccess(processedItems);
+                }
+            }
         }
-    };
-    
-    // Use the new paginated methods
-    if (collectionKey == null || collectionKey.isEmpty()) {
-        getAllEbookItems(userId, apiKey, ebookCallback);
-    } else {
-        getAllEbookItemsByCollection(userId, apiKey, collectionKey, ebookCallback);
     }
+    
+    @Override
+    public void onError(String errorMessage) {
+        callback.onError(errorMessage);
+    }
+};
+
+// Use the existing pagination methods - just call them with proper pagination
+if (collectionKey == null || collectionKey.isEmpty()) {
+    getAllEbookItemsPaginated(userId, apiKey, null, new ArrayList<>(), 0, ebookCallback);
+} else {
+    getAllEbookItemsPaginated(userId, apiKey, collectionKey, new ArrayList<>(), 0, ebookCallback);
 }
 
 }
