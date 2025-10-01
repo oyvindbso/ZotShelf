@@ -804,7 +804,7 @@ public class ZoteroApiClient {
         }
     }
 }
-EbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
+public void getAllEbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
         executor.execute(() -> {
             getAllEbookItemsPaginated(userId, apiKey, null, new ArrayList<>(), 0, callback);
         });
@@ -820,7 +820,7 @@ EbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callba
         });
     }
 
-     private void getAllEbookItemsPaginated(String userId, String apiKey, String collectionKey, 
+    private void getAllEbookItemsPaginated(String userId, String apiKey, String collectionKey, 
                                           List<ZoteroItem> allItems, int start, 
                                           ZoteroCallback<List<ZoteroItem>> callback) {
         
