@@ -803,7 +803,6 @@ public class ZoteroApiClient {
             getAllEbookItemsByCollection(userId, apiKey, collectionKey, ebookCallback);
         }
     }
-}
 public void getAllEbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
         executor.execute(() -> {
             getAllEbookItemsPaginated(userId, apiKey, null, new ArrayList<>(), 0, callback);
