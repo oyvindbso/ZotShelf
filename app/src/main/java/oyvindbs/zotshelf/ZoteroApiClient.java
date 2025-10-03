@@ -763,4 +763,4 @@ public class ZoteroApiClient {
             callback.onError("Network error: " + e.getMessage());
         }
     }
-
+}
