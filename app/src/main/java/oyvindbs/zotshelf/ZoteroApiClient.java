@@ -763,4 +763,139 @@ public class ZoteroApiClient {
             callback.onError("Network error: " + e.getMessage());
         }
     }
+public void getAllEbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
+    executor.execute(() -> {
+        getAllEbookItemsPaginated(userId, apiKey, null, new ArrayList<>(), 0, callback);
+    });
+}
+
+public void getAllEbookItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+    executor.execute(() -> {
+        if (collectionKey == null || collectionKey.isEmpty()) {
+            getAllEbookItems(userId, apiKey, callback);
+            return;
+        }
+        getAllEbookItemsPaginated(userId, apiKey, collectionKey, new ArrayList<>(), 0, callback);
+    });
+}
+
+private void getAllEbookItemsPaginated(String userId, String apiKey, String collectionKey, 
+                                      List<ZoteroItem> allItems, int start, 
+                                      ZoteroCallback<List<ZoteroItem>> callback) {
+    
+    Call<List<ZoteroItem>> call;
+    
+    if (collectionKey == null || collectionKey.isEmpty()) {
+        call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100);
+    } else {
+        call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100);
+    }
+    
+    try {
+        Response<List<ZoteroItem>> response = call.execute();
+        if (response.isSuccessful() && response.body() != null) {
+            List<ZoteroItem> items = response.body();
+            
+            List<ZoteroItem> filteredItems = filterItemsByUserPreferences(items);
+            allItems.addAll(filteredItems);
+            
+            if (items.size() == 100) {
+                getAllEbookItemsPaginated(userId, apiKey, collectionKey, allItems, start + 100, callback);
+            } else {
+                Log.d(TAG, "Fetched total of " + allItems.size() + " ebook items");
+                callback.onSuccess(allItems);
+            }
+        } else {
+            callback.onError("Failed to fetch items: " + response.code());
+        }
+    } catch (IOException e) {
+        Log.e(TAG, "API error", e);
+        callback.onError("Network error: " + e.getMessage());
+    }
+}
+
+public void getAllEbookItemsWithMetadata(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+    ZoteroCallback<List<ZoteroItem>> ebookCallback = new ZoteroCallback<List<ZoteroItem>>() {
+        @Override
+        public void onSuccess(List<ZoteroItem> ebookItems) {
+            if (ebookItems.isEmpty()) {
+                callback.onSuccess(ebookItems);
+                return;
+            }
+            
+            Log.d(TAG, "Processing " + ebookItems.size() + " ebook items for metadata");
+            
+            UserPreferences prefs = new UserPreferences(context);
+            if (prefs.getBooksOnly()) {
+                List<ZoteroItem> bookItems = new ArrayList<>();
+                for (ZoteroItem item : ebookItems) {
+                    if (item.isBook()) {
+                        bookItems.add(item);
+                    }
+                }
+                ebookItems = bookItems;
+                Log.d(TAG, "After books-only filter: " + ebookItems.size() + " items");
+            }
+            
+            final List<ZoteroItem> processedItems = new ArrayList<>();
+            final int[] itemsToProcess = {ebookItems.size()};
+            
+            if (ebookItems.isEmpty()) {
+                callback.onSuccess(new ArrayList<>());
+                return;
+            }
+            
+            for (ZoteroItem ebookItem : ebookItems) {
+                String parentKey = ebookItem.getParentItemKey();
+                
+                if (parentKey != null && !parentKey.isEmpty()) {
+                    getParentItem(userId, apiKey, parentKey, new ZoteroCallback<ZoteroItem>() {
+                        @Override
+                        public void onSuccess(ZoteroItem parentItem) {
+                            ebookItem.setParentItem(parentItem);
+                            processedItems.add(ebookItem);
+                            
+                            itemsToProcess[0]--;
+                            if (itemsToProcess[0] == 0) {
+                                Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
+                                callback.onSuccess(processedItems);
+                            }
+                        }
+                        
+                        @Override
+                        public void onError(String errorMessage) {
+                            Log.e(TAG, "Error fetching parent item: " + errorMessage);
+                            processedItems.add(ebookItem);
+                            
+                            itemsToProcess[0]--;
+                            if (itemsToProcess[0] == 0) {
+                                Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
+                                callback.onSuccess(processedItems);
+                            }
+                        }
+                    });
+                } else {
+                    processedItems.add(ebookItem);
+                    
+                    itemsToProcess[0]--;
+                    if (itemsToProcess[0] == 0) {
+                        Log.d(TAG, "Finished processing all items. Final count: " + processedItems.size());
+                        callback.onSuccess(processedItems);
+                    }
+                }
+            }
+        }
+        
+        @Override
+        public void onError(String errorMessage) {
+            callback.onError(errorMessage);
+        }
+    };
+    
+    if (collectionKey == null || collectionKey.isEmpty()) {
+        getAllEbookItems(userId, apiKey, ebookCallback);
+    } else {
+        getAllEbookItemsByCollection(userId, apiKey, collectionKey, ebookCallback);
+    }
+} 
 }
