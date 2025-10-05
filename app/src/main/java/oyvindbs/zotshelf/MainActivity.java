@@ -326,16 +326,18 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
 
     Log.d("MainActivity", "Processing " + zoteroItems.size() + " Zotero items");
 
-    // Process each Zotero item that has ebooks
     List<EpubCoverItem> newCoverItems = new ArrayList<>();
     final int totalItems = zoteroItems.size();
     final int[] processedCount = {0};
+    
+    // Collections for batch database save
+    final List<ZoteroItem> itemsToSave = Collections.synchronizedList(new ArrayList<>());
+    final List<String> coverPathsToSave = Collections.synchronizedList(new ArrayList<>());
     
     for (ZoteroItem item : zoteroItems) {
         zoteroApiClient.downloadEbook(item, new ZoteroApiClient.FileCallback() {
             @Override
             public void onFileDownloaded(ZoteroItem item, String filePath) {
-                // Extract cover from the ebook file
                 CoverExtractor.extractCover(filePath, new CoverExtractor.CoverCallback() {
                     @Override
                     public void onCoverExtracted(String coverPath) {
@@ -350,10 +352,17 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
                         synchronized (newCoverItems) {
                             newCoverItems.add(coverItem);
                             
-                            // Save to enhanced database
-                            coverRepository.saveCoverFromZoteroItem(item, coverPath);
+                            // Add to batch save lists
+                            itemsToSave.add(item);
+                            coverPathsToSave.add(coverPath);
                             
                             processedCount[0]++;
+                            
+                            // Save to database immediately for each item (ensures persistence)
+                            new Thread(() -> {
+                                coverRepository.saveCoverFromZoteroItemSync(item, coverPath);
+                            }).start();
+                            
                             if (processedCount[0] == totalItems) {
                                 updateUI(newCoverItems);
                             }
@@ -362,11 +371,10 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
 
                     @Override
                     public void onError(String errorMessage) {
-                        // If cover extraction fails, still add the item but with a placeholder
                         EpubCoverItem coverItem = new EpubCoverItem(
                                 item.getKey(),
                                 item.getTitle(),
-                                null, // null cover path will show placeholder
+                                null,
                                 item.getAuthors(),
                                 userPreferences.getZoteroUsername()
                         );
@@ -374,10 +382,16 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
                         synchronized (newCoverItems) {
                             newCoverItems.add(coverItem);
                             
-                            // Save to database without cover
-                            coverRepository.saveCoverFromZoteroItem(item, null);
+                            // Save without cover
+                            itemsToSave.add(item);
+                            coverPathsToSave.add(null);
                             
                             processedCount[0]++;
+                            
+                            new Thread(() -> {
+                                coverRepository.saveCoverFromZoteroItemSync(item, null);
+                            }).start();
+                            
                             if (processedCount[0] == totalItems) {
                                 updateUI(newCoverItems);
                             }
@@ -388,11 +402,10 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
             
             @Override
             public void onError(ZoteroItem item, String errorMessage) {
-                // If download fails, still add the item but with error info and placeholder
                 EpubCoverItem coverItem = new EpubCoverItem(
                         item.getKey(),
                         item.getTitle() + " (Download failed)",
-                        null, // null cover path will show placeholder
+                        null,
                         item.getAuthors(),
                         userPreferences.getZoteroUsername()
                 );
@@ -400,10 +413,15 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
                 synchronized (newCoverItems) {
                     newCoverItems.add(coverItem);
                     
-                    // Save to database without cover
-                    coverRepository.saveCoverFromZoteroItem(item, null);
+                    itemsToSave.add(item);
+                    coverPathsToSave.add(null);
                     
                     processedCount[0]++;
+                    
+                    new Thread(() -> {
+                        coverRepository.saveCoverFromZoteroItemSync(item, null);
+                    }).start();
+                    
                     if (processedCount[0] == totalItems) {
                         updateUI(newCoverItems);
                     }
@@ -412,6 +430,7 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
         });
     }
 }
+
 
 private void updateUI(final List<EpubCoverItem> newItems) {
     runOnUiThread(() -> {
