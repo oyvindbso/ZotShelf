@@ -50,31 +50,24 @@ import java.util.List;
   
   // Enhanced queries for offline functionality
   
-  // Get covers by file type preferences
+  
 @Query("SELECT * FROM epub_covers WHERE " +
-       "(:showEpubs = 1 AND mimeType = " + "'application/epub+zip'" + ") OR " +
-       "(:showPdfs = 1 AND mimeType = " + "'application/pdf'" + ")")
+       "(:showEpubs = 1 AND mimeType = 'application/epub+zip') OR " +
+       "(:showPdfs = 1 AND mimeType = 'application/pdf')")
 List<EpubCoverEntity> getCoversByFileTypes(boolean showEpubs, boolean showPdfs);
 
-
-  
-  // Get covers by books-only filter
 @Query("SELECT * FROM epub_covers WHERE " +
        "((:booksOnly = 1 AND isBook = 1) OR (:booksOnly = 0)) AND " +
-       "((:showEpubs = 1 AND mimeType = " + "'application/epub+zip'" + ") OR " +
-       "(:showPdfs = 1 AND mimeType = " + "'application/pdf'" + "))")
+       "((:showEpubs = 1 AND mimeType = 'application/epub+zip') OR " +
+       "(:showPdfs = 1 AND mimeType = 'application/pdf'))")
 List<EpubCoverEntity> getCoversByPreferences(boolean booksOnly, boolean showEpubs, boolean showPdfs);
 
-
-  
-  // Get covers that belong to a specific collection
-  @Query("SELECT * FROM epub_covers WHERE " +
-       "(collectionKeys = " + "''" + " OR collectionKeys IS NULL OR collectionKeys LIKE " + "'%'" + " || :collectionKey || " + "'%'" + ") AND " +
-       "((:showEpubs = 1 AND mimeType = " + "'application/epub+zip'" + ") OR " +
-       "(:showPdfs = 1 AND mimeType = " + "'application/pdf'" + ")) AND " +
+@Query("SELECT * FROM epub_covers WHERE " +
+       "(:collectionKey = '' OR collectionKeys = '' OR collectionKeys LIKE '%' || :collectionKey || '%') AND " +
+       "((:showEpubs = 1 AND mimeType = 'application/epub+zip') OR " +
+       "(:showPdfs = 1 AND mimeType = 'application/pdf')) AND " +
        "((:booksOnly = 1 AND isBook = 1) OR (:booksOnly = 0))")
 List<EpubCoverEntity> getCoversByCollection(String collectionKey, boolean booksOnly, boolean showEpubs, boolean showPdfs);
-
   
   // Get covers modified since a certain timestamp (for incremental sync)
   @Query("SELECT * FROM epub_covers WHERE lastUpdated > :timestamp")
