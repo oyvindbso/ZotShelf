@@ -78,18 +78,58 @@ import java.util.concurrent.Executors;
     });
     }
   
+  
+  /**
+ * Save a ZoteroItem with its cover to the database (synchronous version for critical saves)
+ */
+public void saveCoverFromZoteroItemSync(ZoteroItem item, String coverPath) {
+    try {
+        EpubCoverEntity entity = createEntityFromZoteroItem(item, coverPath);
+        database.epubCoverDao().insert(entity);
+        Log.d(TAG, "Saved cover for item: " + item.getTitle());
+    } catch (Exception e) {
+        Log.e(TAG, "Error saving cover for item: " + item.getTitle(), e);
+    }
+}
+
   /**
   - Create EpubCoverEntity from ZoteroItem with full metadata
     */
-    private EpubCoverEntity createEntityFromZoteroItem(ZoteroItem item, String coverPath) {
+    
+    /**
+ * Save with collection keys properly set
+ */
+private EpubCoverEntity createEntityFromZoteroItem(ZoteroItem item, String coverPath) {
     EpubCoverEntity entity = new EpubCoverEntity(
-    item.getKey(),
-    item.getTitle(),
-    item.getAuthors(),
-    coverPath,
-    userPreferences.getZoteroUsername()
+        item.getKey(),
+        item.getTitle(),
+        item.getAuthors(),
+        coverPath,
+        userPreferences.getZoteroUsername()
     );
     
+    // Set additional metadata for offline support
+    entity.setFileName(item.getFilename());
+    entity.setMimeType(item.getMimeType());
+    entity.setParentItemType(item.getParentItemType());
+    entity.setBook(item.isBook());
+    
+    // CRITICAL: Set collection keys - this was missing!
+    String currentCollection = userPreferences.getSelectedCollectionKey();
+    if (currentCollection != null && !currentCollection.isEmpty()) {
+        entity.setCollectionKeys(currentCollection);
+    } else {
+        entity.setCollectionKeys(""); // Empty means all collections
+    }
+    
+    // Set download URL if available
+    if (item.getLinks() != null && item.getLinks().getEnclosure() != null) {
+        entity.setDownloadUrl(item.getLinks().getEnclosure().getHref());
+    }
+    
+    return entity;
+}
+
     // Set additional metadata for offline support
     entity.setFileName(item.getFilename());
     entity.setMimeType(item.getMimeType());
