@@ -92,6 +92,7 @@ public class EpubCoverRepository {
         entity.setMimeType(item.getMimeType());
         entity.setParentItemType(item.getParentItemType());
         entity.setBook(item.isBook());
+        entity.setYear(item.getYear());
         
         String currentCollection = userPreferences.getSelectedCollectionKey();
         if (currentCollection != null && !currentCollection.isEmpty()) {
@@ -154,6 +155,7 @@ public class EpubCoverRepository {
                     coverPath,
                     entity.getAuthors(),
                     entity.getZoteroUsername()
+                    entity.getYear()  
             );
             coverItems.add(item);
         }

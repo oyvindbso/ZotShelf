@@ -25,6 +25,7 @@ public class UserPreferences {
     // Sort mode constants
     public static final int SORT_BY_TITLE = 0;
     public static final int SORT_BY_AUTHOR = 1;
+    public static final int SORT_BY_YEAR = 2;  
     
     private final SharedPreferences preferences;
     

@@ -36,6 +36,9 @@ public class ZoteroItem {
         
         @SerializedName("itemType")
         private String itemType;
+
+        @SerializedName("date")  
+        private String date;
     }
     
     // Nested class to represent creator data
@@ -234,6 +237,31 @@ public class ZoteroItem {
     
     public ZoteroLinks getLinks() {
         return links;
+    }
+    
+    public String getYear() {
+        // First try to get year from parent item
+        if (parentItem != null && parentItem.data != null) {
+            return parentItem.data.date;
+        }
+        // Fall back to attachment date if no parent
+        return data != null ? data.date : null;
+    }
+
+    public int getYearAsInt() {
+        String yearStr = getYear();
+        if (yearStr == null || yearStr.isEmpty()) {
+            return 9999; // Put items without year at the end
+        }
+        
+        // Extract first 4 digits (year) from date string
+        // Handles formats like "2023", "2023-01-15", "2023/01/15", etc.
+        try {
+            String year = yearStr.replaceAll("[^0-9]", "").substring(0, 4);
+            return Integer.parseInt(year);
+        } catch (Exception e) {
+            return 9999; // If parsing fails, put at end
+        }
     }
     
     // For debugging

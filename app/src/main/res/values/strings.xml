@@ -37,6 +37,7 @@
     <string name="sort_by_title">Sort by Title</string>
     <string name="sort_by_author">Sort by Author</string>
     <string name="change_sort_mode">Change Sort Mode</string>
+    <string name="sort_by_year">Sort by Year</string>
     
     <!-- File type settings -->
     <string name="file_type_settings">File Type Settings</string>

@@ -348,6 +348,7 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
                                 coverPath,
                                 item.getAuthors(),
                                 userPreferences.getZoteroUsername()
+                                item.getYear()
                         );
                         
                         synchronized (newCoverItems) {
@@ -706,6 +707,7 @@ private void showSortModeDialog() {
     String[] options = {
         getString(R.string.sort_by_title), 
         getString(R.string.sort_by_author)
+        getString(R.string.sort_by_year) 
     };
     int currentMode = userPreferences.getSortMode();
     

@@ -20,6 +20,8 @@ public class CoverSorter {
         
         if (sortMode == UserPreferences.SORT_BY_AUTHOR) {
             comparator = new AuthorComparator();
+        } else if (sortMode == UserPreferences.SORT_BY_YEAR) {  
+        comparator = new YearComparator();
         } else {
             // Default to title sorting
             comparator = new TitleComparator();
@@ -141,4 +143,36 @@ public class CoverSorter {
         
         return trimmed;
     }
+
+/**
+ * Comparator for sorting by publication year (newest first)
+ */
+    private static class YearComparator implements Comparator<EpubCoverItem> {
+        @Override
+        public int compare(EpubCoverItem item1, EpubCoverItem item2) {
+            int year1 = item1.getYearAsInt();
+            int year2 = item2.getYearAsInt();
+            
+            // Sort newest first (descending order)
+            int result = Integer.compare(year2, year1);
+            
+            // If years are the same, sort by title as secondary criteria
+            if (result == 0) {
+                String title1 = item1.getTitle();
+                String title2 = item2.getTitle();
+                
+                if (title1 == null && title2 == null) return 0;
+                if (title1 == null) return 1;
+                if (title2 == null) return -1;
+                
+                title1 = removeArticles(title1);
+                title2 = removeArticles(title2);
+                
+                result = title1.compareToIgnoreCase(title2);
+            }
+            
+            return result;
+        }
+    }
+    
 }
