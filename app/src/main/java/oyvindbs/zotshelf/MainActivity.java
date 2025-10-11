@@ -438,6 +438,10 @@ private void updateUI(final List<EpubCoverItem> newItems) {
         coverItems.clear();
         coverItems.addAll(newItems);
         
+        // Apply current sort mode
+        int sortMode = userPreferences.getSortMode();
+        CoverSorter.sortCovers(coverItems, sortMode);
+        
         // Re-create the adapter with the current display mode
         int displayMode = userPreferences.getDisplayMode();
         adapter = new CoverGridAdapter(this, coverItems, this, displayMode);
@@ -524,6 +528,9 @@ public boolean onOptionsItemSelected(@NonNull MenuItem item) {
             return true;
         case R.id.action_change_display:
             showDisplayModeDialog();
+            return true;
+        case R.id.action_sort:  // <-- ADD THIS CASE
+            showSortModeDialog();
             return true;
         case R.id.action_toggle_epubs:
             toggleEpubsEnabled(item);
@@ -691,7 +698,36 @@ protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         }
     }
 }
-
+    
+private void showSortModeDialog() {
+    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    builder.setTitle(R.string.sort_mode_title);
+    
+    String[] options = {
+        getString(R.string.sort_by_title), 
+        getString(R.string.sort_by_author)
+    };
+    int currentMode = userPreferences.getSortMode();
+    
+    builder.setSingleChoiceItems(options, currentMode, (dialog, which) -> {
+        userPreferences.setSortMode(which);
+        dialog.dismiss();
+        
+        // Re-sort and refresh the display
+        CoverSorter.sortCovers(coverItems, which);
+        adapter.notifyDataSetChanged();
+        
+        String message = which == UserPreferences.SORT_BY_AUTHOR ? 
+            "Sorted by author" : "Sorted by title";
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    });
+    
+    builder.setNegativeButton(R.string.cancel, (dialog, which) -> dialog.dismiss());
+    
+    AlertDialog dialog = builder.create();
+    dialog.show();
+}
+    
 private void showDisplayModeDialog() {
     AlertDialog.Builder builder = new AlertDialog.Builder(this);
     builder.setTitle("Display Mode");
