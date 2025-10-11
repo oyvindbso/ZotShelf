@@ -2,6 +2,8 @@ package oyvindbs.zotshelf;
 
 
 import com.google.gson.annotations.SerializedName;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 public class ZoteroItem {
     
@@ -39,6 +41,9 @@ public class ZoteroItem {
 
         @SerializedName("date")  
         private String date;
+
+        @SerializedName("year")  
+        private String year;
     }
     
     // Nested class to represent creator data
@@ -240,12 +245,98 @@ public class ZoteroItem {
     }
     
     public String getYear() {
-        // First try to get year from parent item
-        if (parentItem != null && parentItem.data != null) {
-            return parentItem.data.date;
+    // First try to get year from parent item
+    if (parentItem != null && parentItem.data != null) {
+        // Try explicit year field first
+        if (parentItem.data.year != null && !parentItem.data.year.isEmpty()) {
+            return parentItem.data.year;
         }
-        // Fall back to attachment date if no parent
-        return data != null ? data.date : null;
+        // Try to extract year from date field
+        if (parentItem.data.date != null && !parentItem.data.date.isEmpty()) {
+            String year = extractYearFromDate(parentItem.data.date);
+            if (year != null) {
+                return year;
+            }
+        }
+    }
+    
+    // Fall back to attachment's own data
+    if (data != null) {
+        if (data.year != null && !data.year.isEmpty()) {
+            return data.year;
+        }
+        if (data.date != null && !data.date.isEmpty()) {
+            String year = extractYearFromDate(data.date);
+            if (year != null) {
+                return year;
+            }
+        }
+    }
+    
+    return "Unknown";
+    }
+
+    private String extractYearFromDate(String dateString) {
+        if (dateString == null || dateString.isEmpty()) {
+            return null;
+        }
+        
+        // Remove common prefixes that might interfere
+        dateString = dateString.toLowerCase()
+            .replace("circa", "")
+            .replace("ca.", "")
+            .replace("c.", "")
+            .trim();
+        
+        // Pattern to match a 4-digit year (1900-2099)
+        Pattern pattern = Pattern.compile("\\b(19|20)\\d{2}\\b");
+        Matcher matcher = pattern.matcher(dateString);
+        
+        if (matcher.find()) {
+            String year = matcher.group();
+            
+            // Validate the year is reasonable (not in the future by more than 1 year)
+            try {
+                int yearInt = Integer.parseInt(year);
+                int currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+                
+                // Allow up to 1 year in the future (for forthcoming publications)
+                if (yearInt >= 1800 && yearInt <= currentYear + 1) {
+                    return year;
+                }
+            } catch (NumberFormatException e) {
+                // If parsing fails, still return the matched string
+                return year;
+            }
+            
+            return year;
+        }
+        
+        // If no 4-digit year found, try to parse common date formats
+        // This handles cases where the year might be 2-digit or in an unusual format
+        String cleanDate = dateString.replaceAll("[^0-9]", " ").trim();
+        String[] parts = cleanDate.split("\\s+");
+        
+        for (String part : parts) {
+            try {
+                int num = Integer.parseInt(part);
+                // Check if it could be a 4-digit year
+                if (num >= 1800 && num <= 2099) {
+                    return String.valueOf(num);
+                }
+                // Check if it's a 2-digit year (00-99)
+                if (num >= 0 && num <= 99) {
+                    // Assume 00-30 means 2000-2030, 31-99 means 1931-1999
+                    int fullYear = num <= 30 ? 2000 + num : 1900 + num;
+                    return String.valueOf(fullYear);
+                }
+            } catch (NumberFormatException e) {
+                // Skip this part
+                continue;
+            }
+        }
+        
+        return null;
     }
 
     public int getYearAsInt() {

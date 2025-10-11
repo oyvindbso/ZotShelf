@@ -37,11 +37,11 @@ public class EpubCoverItem {
         return zoteroUsername;
     }
     
-    public String getYear() {  // <-- ADD THIS
+    public String getYear() {  
         return year;
     }
 
-    public int getYearAsInt() {  // <-- ADD THIS
+    public int getYearAsInt() { 
         if (year == null || year.isEmpty()) {
             return 9999;
         }

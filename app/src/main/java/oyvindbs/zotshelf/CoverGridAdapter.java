@@ -73,6 +73,10 @@ public class CoverGridAdapter extends RecyclerView.Adapter<CoverGridAdapter.Cove
                 String authorTitle = item.getAuthors() + " - " + item.getTitle();
                 holder.titleText.setText(authorTitle);
                 break;
+            case UserPreferences.DISPLAY_TITLE_YEAR:  // NEW MODE
+                String titleYear = item.getTitle() + " (" + item.getYear() + ")";
+                holder.titleText.setText(titleYear);
+                break;
             case UserPreferences.DISPLAY_TITLE_ONLY:
             default:
                 holder.titleText.setText(item.getTitle());

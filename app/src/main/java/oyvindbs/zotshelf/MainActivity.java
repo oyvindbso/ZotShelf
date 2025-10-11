@@ -268,15 +268,25 @@ private void processZoteroItemsForCache(List<ZoteroItem> zoteroItems) {
                 CoverExtractor.extractCover(filePath, new CoverExtractor.CoverCallback() {
                     @Override
                     public void onCoverExtracted(String coverPath) {
-                        // Save to database using the enhanced method
-                        coverRepository.saveCoverFromZoteroItem(item, coverPath);
-                    }
+                        EpubCoverItem coverItem = new EpubCoverItem(
+                                item.getKey(),
+                                item.getTitle(),
+                                coverPath,
+                                item.getAuthors(),
+                                userPreferences.getZoteroUsername(),
+                                item.getYear()  // ADD THIS
+                        );
 
                     @Override
                     public void onError(String errorMessage) {
-                        // Save without cover
-                        coverRepository.saveCoverFromZoteroItem(item, null);
-                    }
+                        EpubCoverItem coverItem = new EpubCoverItem(
+                                item.getKey(),
+                                item.getTitle(),
+                                null,
+                                item.getAuthors(),
+                                userPreferences.getZoteroUsername(),
+                                item.getYear()  // ADD THIS
+                        );
                 });
             }
             
@@ -372,14 +382,16 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
                     }
 
                     @Override
-                    public void onError(String errorMessage) {
+                    public void onError(ZoteroItem item, String errorMessage) {
                         EpubCoverItem coverItem = new EpubCoverItem(
                                 item.getKey(),
-                                item.getTitle(),
+                                item.getTitle() + " (Download failed)",
                                 null,
                                 item.getAuthors(),
-                                userPreferences.getZoteroUsername()
+                                userPreferences.getZoteroUsername(),
+                                item.getYear()  
                         );
+                    }
                         
                         synchronized (newCoverItems) {
                             newCoverItems.add(coverItem);
