@@ -33,9 +33,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
   database.execSQL("ALTER TABLE epub_covers ADD COLUMN isBook INTEGER DEFAULT 1");
   database.execSQL("ALTER TABLE epub_covers ADD COLUMN collectionKeys TEXT DEFAULT ‘’");
   }
-  };
-
-     private static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+  };  
+  return instance;
+  
+  private static final Migration MIGRATION_2_3 = new Migration(2, 3) {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase database) {
             database.execSQL("ALTER TABLE epub_covers ADD COLUMN year TEXT");
@@ -55,17 +56,4 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
         return instance;
     }
 }
-  
-  public static synchronized AppDatabase getInstance(Context context) {
-  if (instance == null) {
-  instance = Room.databaseBuilder(
-  context.getApplicationContext(),
-  AppDatabase.class,
-  DATABASE_NAME)
-  .addMigrations(MIGRATION_1_2)
-  .fallbackToDestructiveMigration() // Only as last resort
-  .build();
-  }
-  return instance;
-  }
-  }
+
