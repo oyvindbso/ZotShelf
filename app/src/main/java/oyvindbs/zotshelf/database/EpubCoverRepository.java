@@ -81,18 +81,11 @@ public class EpubCoverRepository {
 
     private EpubCoverEntity createEntityFromZoteroItem(ZoteroItem item, String coverPath) {
         EpubCoverEntity entity = new EpubCoverEntity(
-                item.getKey(),
-                item.getTitle(),
-                item.getAuthors(),
-                coverPath,
-                userPreferences.getZoteroUsername()
-        );
-        
-        entity.setFileName(item.getFilename());
-        entity.setMimeType(item.getMimeType());
-        entity.setParentItemType(item.getParentItemType());
-        entity.setBook(item.isBook());
-        entity.setYear(item.getYear());
+            entity.setFileName(item.getFilename());
+            entity.setMimeType(item.getMimeType());
+            entity.setParentItemType(item.getParentItemType());
+            entity.setBook(item.isBook());
+            entity.setYear(item.getYear());
         
         String currentCollection = userPreferences.getSelectedCollectionKey();
         if (currentCollection != null && !currentCollection.isEmpty()) {

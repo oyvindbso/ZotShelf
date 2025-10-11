@@ -268,25 +268,15 @@ private void processZoteroItemsForCache(List<ZoteroItem> zoteroItems) {
                 CoverExtractor.extractCover(filePath, new CoverExtractor.CoverCallback() {
                     @Override
                     public void onCoverExtracted(String coverPath) {
-                        EpubCoverItem coverItem = new EpubCoverItem(
-                                item.getKey(),
-                                item.getTitle(),
-                                coverPath,
-                                item.getAuthors(),
-                                userPreferences.getZoteroUsername(),
-                                item.getYear()  // ADD THIS
-                        );
+                        // Save to database using the enhanced method
+                        coverRepository.saveCoverFromZoteroItem(item, coverPath);
+                    }
 
                     @Override
                     public void onError(String errorMessage) {
-                        EpubCoverItem coverItem = new EpubCoverItem(
-                                item.getKey(),
-                                item.getTitle(),
-                                null,
-                                item.getAuthors(),
-                                userPreferences.getZoteroUsername(),
-                                item.getYear()  // ADD THIS
-                        );
+                        // Save without cover
+                        coverRepository.saveCoverFromZoteroItem(item, null);
+                    }
                 });
             }
             
@@ -357,7 +347,7 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
                                 item.getTitle(),
                                 coverPath,
                                 item.getAuthors(),
-                                userPreferences.getZoteroUsername()
+                                userPreferences.getZoteroUsername(),
                                 item.getYear()
                         );
                         
@@ -421,12 +411,14 @@ private void processZoteroItems(List<ZoteroItem> zoteroItems) {
                         item.getTitle() + " (Download failed)",
                         null,
                         item.getAuthors(),
-                        userPreferences.getZoteroUsername()
+                        userPreferences.getZoteroUsername(),
+                        item.getYear()
                 );
                 
                 synchronized (newCoverItems) {
                     newCoverItems.add(coverItem);
                     
+                    // Save without cover
                     itemsToSave.add(item);
                     coverPathsToSave.add(null);
                     
