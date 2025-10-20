@@ -31,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private TabStateManager tabStateManager;
     private UserPreferences userPreferences;
     private TabLayoutMediator tabLayoutMediator;
+    private boolean isFirstResume = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,14 +45,14 @@ public class MainActivity extends AppCompatActivity {
         viewPager = findViewById(R.id.viewPager);
         fabAddTab = findViewById(R.id.fabAddTab);
 
+        // Setup tabs regardless of credentials (fragments will handle empty state)
+        setupTabs();
+        setupFab();
+
         // Check if we have Zotero credentials, if not show settings first
         if (!userPreferences.hasZoteroCredentials()) {
             startActivity(new Intent(this, SettingsActivity.class));
-            return;
         }
-
-        setupTabs();
-        setupFab();
 
         // Handle widget click intent
         if (getIntent().hasExtra("fromWidget")) {
@@ -274,15 +275,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshCurrentTab() {
-        int currentPosition = viewPager.getCurrentItem();
-        CollectionFragment fragment = getCurrentFragment();
-        if (fragment != null) {
-            fragment.refresh();
+        if (tabAdapter == null || viewPager.getAdapter() == null) {
+            return;
         }
+
+        // Give ViewPager2 time to create fragments if needed
+        viewPager.post(() -> {
+            CollectionFragment fragment = getCurrentFragment();
+            if (fragment != null && fragment.isAdded()) {
+                fragment.refresh();
+            }
+        });
     }
 
     private CollectionFragment getCurrentFragment() {
+        if (tabAdapter == null) {
+            return null;
+        }
         int currentPosition = viewPager.getCurrentItem();
+        // ViewPager2 uses "f" + itemId as fragment tag
         return (CollectionFragment) getSupportFragmentManager()
                 .findFragmentByTag("f" + currentPosition);
     }
@@ -375,6 +386,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
+        // Skip refresh on first resume (fragments will load automatically)
+        if (isFirstResume) {
+            isFirstResume = false;
+            return;
+        }
+
         // Check if credentials are available
         if (!userPreferences.hasZoteroCredentials()) {
             // If no credentials, we can't do much
@@ -385,7 +402,11 @@ public class MainActivity extends AppCompatActivity {
         if (!userPreferences.hasAnyFileTypeEnabled()) {
             Toast.makeText(this, "Please enable at least one file type (EPUB or PDF)",
                     Toast.LENGTH_LONG).show();
+            return;
         }
+
+        // Refresh current tab to pick up any changes from settings
+        refreshCurrentTab();
     }
 
     private void showDisplayModeDialog() {
