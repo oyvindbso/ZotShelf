@@ -249,6 +249,10 @@ public class MainActivity extends AppCompatActivity {
                 }
                 return true;
 
+            case R.id.action_sort:
+                showSortDialog();
+                return true;
+
             case R.id.action_info:
                 showInfoDialog();
                 return true;
@@ -407,6 +411,40 @@ public class MainActivity extends AppCompatActivity {
 
         // Refresh current tab to pick up any changes from settings
         refreshCurrentTab();
+    }
+
+    private void showSortDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Sort By");
+
+        String[] options = {"Title", "Author"};
+        int currentMode = userPreferences.getSortMode();
+
+        builder.setSingleChoiceItems(options, currentMode, (dialog, which) -> {
+            userPreferences.setSortMode(which);
+            dialog.dismiss();
+
+            // Apply sorting to current tab
+            applySortingToCurrentTab();
+
+            Toast.makeText(this,
+                    "Sorted by " + (which == UserPreferences.SORT_BY_TITLE ? "Title" : "Author"),
+                    Toast.LENGTH_SHORT).show();
+        });
+
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void applySortingToCurrentTab() {
+        viewPager.post(() -> {
+            CollectionFragment fragment = getCurrentFragment();
+            if (fragment != null && fragment.isAdded()) {
+                fragment.applySorting();
+            }
+        });
     }
 
     private void showDisplayModeDialog() {

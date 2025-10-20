@@ -425,6 +425,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
             coverItems.clear();
             coverItems.addAll(newItems);
 
+            // Apply current sort mode
+            int sortMode = userPreferences.getSortMode();
+            CoverSorter.sortCovers(coverItems, sortMode);
+
             int displayMode = userPreferences.getDisplayMode();
             adapter = new CoverGridAdapter(requireContext(), coverItems, this, displayMode);
             recyclerView.setAdapter(adapter);
@@ -492,5 +496,26 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
             adapter = new CoverGridAdapter(requireContext(), coverItems, this, displayMode);
             recyclerView.setAdapter(adapter);
         }
+    }
+
+    public void applySorting() {
+        if (getActivity() == null) return;
+
+        getActivity().runOnUiThread(() -> {
+            if (!coverItems.isEmpty()) {
+                // Apply current sort mode
+                int sortMode = userPreferences.getSortMode();
+                CoverSorter.sortCovers(coverItems, sortMode);
+
+                // Refresh the adapter
+                if (adapter != null) {
+                    adapter.notifyDataSetChanged();
+                } else {
+                    int displayMode = userPreferences.getDisplayMode();
+                    adapter = new CoverGridAdapter(requireContext(), coverItems, this, displayMode);
+                    recyclerView.setAdapter(adapter);
+                }
+            }
+        });
     }
 }
