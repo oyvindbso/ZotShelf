@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
                 (tab, position) -> {
                     TabStateManager.TabInfo tabInfo = tabAdapter.getTabAt(position);
                     if (tabInfo != null) {
-                        tab.setText(tabInfo.getCollectionName());
+                        tab.setText(tabInfo.getDisplayName());
 
                         // Add close button for tabs (except if it's the only tab)
                         if (tabs.size() > 1) {
@@ -138,16 +138,74 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            if (!NetworkUtils.isNetworkAvailable(this)) {
-                Toast.makeText(this, "No internet connection. Cannot fetch collections.",
-                        Toast.LENGTH_LONG).show();
+            // Show dialog to choose tab type
+            showAddTabDialog();
+        });
+    }
+
+    private void showAddTabDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Add New Tab");
+
+        String[] options = {"By Collection", "By Tags"};
+
+        builder.setItems(options, (dialog, which) -> {
+            if (which == 0) {
+                // By Collection
+                if (!NetworkUtils.isNetworkAvailable(this)) {
+                    Toast.makeText(this, "No internet connection. Cannot fetch collections.",
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+                Intent intent = new Intent(this, CollectionTreeActivity.class);
+                startActivityForResult(intent, REQUEST_CODE_SELECT_COLLECTION);
+            } else {
+                // By Tags
+                showTagInputDialog();
+            }
+        });
+
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private void showTagInputDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Filter by Tags");
+
+        // Create input field
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("Enter tags (separated by semicolons)");
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+
+        android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(50, 0, 50, 0);
+        input.setLayoutParams(lp);
+
+        builder.setView(input);
+
+        builder.setPositiveButton("Create Tab", (dialog, which) -> {
+            String tags = input.getText().toString().trim();
+            if (tags.isEmpty()) {
+                Toast.makeText(this, "Please enter at least one tag", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // Launch the collection tree activity
-            Intent intent = new Intent(this, CollectionTreeActivity.class);
-            startActivityForResult(intent, REQUEST_CODE_SELECT_COLLECTION);
+            // Add new tag-based tab
+            tabStateManager.addTagTab(tags);
+            refreshTabs();
+
+            // Switch to the new tab
+            List<TabStateManager.TabInfo> allTabs = tabStateManager.getOpenTabs();
+            viewPager.setCurrentItem(allTabs.size() - 1, true);
+
+            Toast.makeText(this, "Created tag filter: " + tags, Toast.LENGTH_SHORT).show();
         });
+
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
     }
 
     private void showCloseTabDialog(int position) {
@@ -156,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
 
         new AlertDialog.Builder(this)
                 .setTitle("Close Tab")
-                .setMessage("Close tab '" + tabInfo.getCollectionName() + "'?")
+                .setMessage("Close tab '" + tabInfo.getDisplayName() + "'?")
                 .setPositiveButton("Close", (dialog, which) -> closeTab(position))
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -180,7 +238,7 @@ public class MainActivity extends AppCompatActivity {
                 (tab, position) -> {
                     TabStateManager.TabInfo tabInfo = tabAdapter.getTabAt(position);
                     if (tabInfo != null) {
-                        tab.setText(tabInfo.getCollectionName());
+                        tab.setText(tabInfo.getDisplayName());
 
                         if (tabs.size() > 1) {
                             tab.view.setOnLongClickListener(v -> {

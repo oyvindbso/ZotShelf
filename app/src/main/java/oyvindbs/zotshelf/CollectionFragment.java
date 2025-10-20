@@ -29,9 +29,11 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
     private static final String ARG_COLLECTION_KEY = "collection_key";
     private static final String ARG_COLLECTION_NAME = "collection_name";
+    private static final String ARG_TAGS = "tags";
 
     private String collectionKey;
     private String collectionName;
+    private String tags;
 
     private RecyclerView recyclerView;
     private CoverGridAdapter adapter;
@@ -45,10 +47,15 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
     private boolean isOfflineMode = false;
 
     public static CollectionFragment newInstance(String collectionKey, String collectionName) {
+        return newInstance(collectionKey, collectionName, null);
+    }
+
+    public static CollectionFragment newInstance(String collectionKey, String collectionName, String tags) {
         CollectionFragment fragment = new CollectionFragment();
         Bundle args = new Bundle();
         args.putString(ARG_COLLECTION_KEY, collectionKey);
         args.putString(ARG_COLLECTION_NAME, collectionName);
+        args.putString(ARG_TAGS, tags);
         fragment.setArguments(args);
         return fragment;
     }
@@ -59,6 +66,7 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         if (getArguments() != null) {
             collectionKey = getArguments().getString(ARG_COLLECTION_KEY);
             collectionName = getArguments().getString(ARG_COLLECTION_NAME);
+            tags = getArguments().getString(ARG_TAGS);
         }
 
         userPreferences = new UserPreferences(requireContext());
@@ -183,9 +191,9 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         String userId = userPreferences.getZoteroUserId();
         String apiKey = userPreferences.getZoteroApiKey();
 
-        Log.d("CollectionFragment", "Loading covers from API - Collection: " + collectionKey);
+        Log.d("CollectionFragment", "Loading covers from API - Collection: " + collectionKey + ", Tags: " + tags);
 
-        zoteroApiClient.getAllEbookItemsWithMetadata(userId, apiKey, collectionKey,
+        zoteroApiClient.getAllEbookItemsWithMetadata(userId, apiKey, collectionKey, tags,
                 new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
             @Override
             public void onSuccess(List<ZoteroItem> zoteroItems) {
@@ -219,7 +227,7 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         String userId = userPreferences.getZoteroUserId();
         String apiKey = userPreferences.getZoteroApiKey();
 
-        zoteroApiClient.getAllEbookItemsWithMetadata(userId, apiKey, collectionKey,
+        zoteroApiClient.getAllEbookItemsWithMetadata(userId, apiKey, collectionKey, tags,
                 new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
             @Override
             public void onSuccess(List<ZoteroItem> zoteroItems) {

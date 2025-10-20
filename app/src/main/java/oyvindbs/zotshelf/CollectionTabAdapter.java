@@ -23,7 +23,8 @@ public class CollectionTabAdapter extends FragmentStateAdapter {
         TabStateManager.TabInfo tab = tabs.get(position);
         return CollectionFragment.newInstance(
                 tab.getCollectionKey(),
-                tab.getCollectionName()
+                tab.getCollectionName(),
+                tab.getTags()
         );
     }
 

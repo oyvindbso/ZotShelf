@@ -27,10 +27,31 @@ public class TabStateManager {
     public static class TabInfo {
         private String collectionKey;
         private String collectionName;
+        private String tags;  // Semicolon-separated tags
+        private String tabType;  // "collection", "tags", or "both"
 
+        // Constructor for collection-only tabs (backward compatibility)
         public TabInfo(String collectionKey, String collectionName) {
             this.collectionKey = collectionKey;
             this.collectionName = collectionName;
+            this.tags = null;
+            this.tabType = "collection";
+        }
+
+        // Constructor for tag-only tabs
+        public TabInfo(String tags) {
+            this.collectionKey = null;
+            this.collectionName = null;
+            this.tags = tags;
+            this.tabType = "tags";
+        }
+
+        // Constructor for combined collection + tags
+        public TabInfo(String collectionKey, String collectionName, String tags) {
+            this.collectionKey = collectionKey;
+            this.collectionName = collectionName;
+            this.tags = tags;
+            this.tabType = "both";
         }
 
         public String getCollectionKey() {
@@ -39,6 +60,32 @@ public class TabStateManager {
 
         public String getCollectionName() {
             return collectionName;
+        }
+
+        public String getTags() {
+            return tags;
+        }
+
+        public String getTabType() {
+            return tabType != null ? tabType : "collection";
+        }
+
+        public String getDisplayName() {
+            if ("tags".equals(getTabType())) {
+                return "Tags: " + tags;
+            } else if ("both".equals(getTabType())) {
+                return collectionName + " [" + tags + "]";
+            } else {
+                return collectionName != null ? collectionName : "All Collections";
+            }
+        }
+
+        public boolean hasTags() {
+            return tags != null && !tags.trim().isEmpty();
+        }
+
+        public boolean hasCollection() {
+            return collectionKey != null && !collectionKey.isEmpty();
         }
     }
 
@@ -62,12 +109,24 @@ public class TabStateManager {
     }
 
     public void addTab(String collectionKey, String collectionName) {
+        addTab(collectionKey, collectionName, null);
+    }
+
+    public void addTagTab(String tags) {
+        addTab(null, null, tags);
+    }
+
+    public void addTab(String collectionKey, String collectionName, String tags) {
         List<TabInfo> tabs = getOpenTabs();
 
         // Check if tab already exists
         for (TabInfo tab : tabs) {
-            if ((tab.getCollectionKey() == null && collectionKey == null) ||
-                (tab.getCollectionKey() != null && tab.getCollectionKey().equals(collectionKey))) {
+            boolean collectionMatches = (tab.getCollectionKey() == null && collectionKey == null) ||
+                    (tab.getCollectionKey() != null && tab.getCollectionKey().equals(collectionKey));
+            boolean tagsMatch = (tab.getTags() == null && tags == null) ||
+                    (tab.getTags() != null && tab.getTags().equals(tags));
+
+            if (collectionMatches && tagsMatch) {
                 // Tab already exists, don't add duplicate
                 return;
             }
@@ -78,7 +137,16 @@ public class TabStateManager {
             return; // Don't add more tabs than the limit
         }
 
-        tabs.add(new TabInfo(collectionKey, collectionName));
+        TabInfo newTab;
+        if (tags != null && !tags.trim().isEmpty() && collectionKey != null) {
+            newTab = new TabInfo(collectionKey, collectionName, tags);
+        } else if (tags != null && !tags.trim().isEmpty()) {
+            newTab = new TabInfo(tags);
+        } else {
+            newTab = new TabInfo(collectionKey, collectionName);
+        }
+
+        tabs.add(newTab);
         saveOpenTabs(tabs);
     }
 

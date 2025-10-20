@@ -105,7 +105,8 @@ public class ZoteroApiClient {
                 @Query("format") String format,
                 @Query("itemType") String itemType,
                 @Query("start") int start,
-                @Query("limit") int limit
+                @Query("limit") int limit,
+                @Query("tag") String tag
         );
 
         @GET("users/{userId}/collections/{collectionKey}/items")
@@ -116,7 +117,8 @@ public class ZoteroApiClient {
                 @Query("format") String format,
                 @Query("itemType") String itemType,
                 @Query("start") int start,
-                @Query("limit") int limit
+                @Query("limit") int limit,
+                @Query("tag") String tag
         );
         
         @GET
@@ -720,25 +722,29 @@ public class ZoteroApiClient {
     }
 
     public void getAllEbookItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+        getAllEbookItemsByCollection(userId, apiKey, collectionKey, null, callback);
+    }
+
+    public void getAllEbookItemsByCollection(String userId, String apiKey, String collectionKey, String tags, ZoteroCallback<List<ZoteroItem>> callback) {
         executor.execute(() -> {
             if (collectionKey == null || collectionKey.isEmpty()) {
-                getAllEbookItems(userId, apiKey, callback);
+                getAllEbookItems(userId, apiKey, tags, callback);
                 return;
             }
-            getAllEbookItemsPaginated(userId, apiKey, collectionKey, new ArrayList<>(), 0, callback);
+            getAllEbookItemsPaginated(userId, apiKey, collectionKey, tags, new ArrayList<>(), 0, callback);
         });
     }
 
-    private void getAllEbookItemsPaginated(String userId, String apiKey, String collectionKey, 
-                                          List<ZoteroItem> allItems, int start, 
+    private void getAllEbookItemsPaginated(String userId, String apiKey, String collectionKey, String tags,
+                                          List<ZoteroItem> allItems, int start,
                                           ZoteroCallback<List<ZoteroItem>> callback) {
-        
+
         Call<List<ZoteroItem>> call;
-        
+
         if (collectionKey == null || collectionKey.isEmpty()) {
-            call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100);
+            call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100, tags);
         } else {
-            call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100);
+            call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100, tags);
         }
         
         try {
@@ -748,9 +754,9 @@ public class ZoteroApiClient {
                 
                 List<ZoteroItem> filteredItems = filterItemsByUserPreferences(items);
                 allItems.addAll(filteredItems);
-                
+
                 if (items.size() == 100) {
-                    getAllEbookItemsPaginated(userId, apiKey, collectionKey, allItems, start + 100, callback);
+                    getAllEbookItemsPaginated(userId, apiKey, collectionKey, tags, allItems, start + 100, callback);
                 } else {
                     Log.d(TAG, "Fetched total of " + allItems.size() + " ebook items");
                     callback.onSuccess(allItems);
@@ -764,12 +770,20 @@ public class ZoteroApiClient {
         }
     }
 public void getAllEbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
+    getAllEbookItems(userId, apiKey, null, callback);
+}
+
+public void getAllEbookItems(String userId, String apiKey, String tags, ZoteroCallback<List<ZoteroItem>> callback) {
     executor.execute(() -> {
-        getAllEbookItemsPaginated(userId, apiKey, null, new ArrayList<>(), 0, callback);
+        getAllEbookItemsPaginated(userId, apiKey, null, tags, new ArrayList<>(), 0, callback);
     });
 }
 
 public void getAllEbookItemsWithMetadata(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+    getAllEbookItemsWithMetadata(userId, apiKey, collectionKey, null, callback);
+}
+
+public void getAllEbookItemsWithMetadata(String userId, String apiKey, String collectionKey, String tags, ZoteroCallback<List<ZoteroItem>> callback) {
     ZoteroCallback<List<ZoteroItem>> ebookCallback = new ZoteroCallback<List<ZoteroItem>>() {
         @Override
         public void onSuccess(List<ZoteroItem> ebookItems) {
@@ -846,11 +860,11 @@ public void getAllEbookItemsWithMetadata(String userId, String apiKey, String co
             callback.onError(errorMessage);
         }
     };
-    
+
     if (collectionKey == null || collectionKey.isEmpty()) {
-        getAllEbookItems(userId, apiKey, ebookCallback);
+        getAllEbookItems(userId, apiKey, tags, ebookCallback);
     } else {
-        getAllEbookItemsByCollection(userId, apiKey, collectionKey, ebookCallback);
+        getAllEbookItemsByCollection(userId, apiKey, collectionKey, tags, ebookCallback);
     }
-} 
+}
 }
