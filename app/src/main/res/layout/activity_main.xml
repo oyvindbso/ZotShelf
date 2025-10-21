@@ -12,9 +12,11 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="?attr/colorPrimary"
+        android:textAllCaps="false"
         app:tabMode="scrollable"
         app:tabTextColor="@android:color/white"
         app:tabSelectedTextColor="@android:color/white"
+        app:tabTextAppearance="@style/TabTextStyle"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

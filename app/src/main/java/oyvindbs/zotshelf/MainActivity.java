@@ -23,6 +23,8 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_SELECT_COLLECTION = 1001;
+    private static final int REQUEST_CODE_SELECT_COLLECTION_WITH_TAGS = 1002;
+    private String pendingTags = null;
 
     private TabLayout tabLayout;
     private ViewPager2 viewPager;
@@ -147,11 +149,11 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Add New Tab");
 
-        String[] options = {"By Collection", "By Tags"};
+        String[] options = {"By Collection", "By Tags", "By Collection + Tags"};
 
         builder.setItems(options, (dialog, which) -> {
             if (which == 0) {
-                // By Collection
+                // By Collection only
                 if (!NetworkUtils.isNetworkAvailable(this)) {
                     Toast.makeText(this, "No internet connection. Cannot fetch collections.",
                             Toast.LENGTH_LONG).show();
@@ -159,9 +161,12 @@ public class MainActivity extends AppCompatActivity {
                 }
                 Intent intent = new Intent(this, CollectionTreeActivity.class);
                 startActivityForResult(intent, REQUEST_CODE_SELECT_COLLECTION);
+            } else if (which == 1) {
+                // By Tags only
+                showTagInputDialog(false);
             } else {
-                // By Tags
-                showTagInputDialog();
+                // By Collection + Tags
+                showTagInputDialog(true);
             }
         });
 
@@ -169,9 +174,9 @@ public class MainActivity extends AppCompatActivity {
         builder.show();
     }
 
-    private void showTagInputDialog() {
+    private void showTagInputDialog(boolean withCollection) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Filter by Tags");
+        builder.setTitle(withCollection ? "Filter by Tags (then select collection)" : "Filter by Tags");
 
         // Create input field
         android.widget.EditText input = new android.widget.EditText(this);
@@ -186,22 +191,35 @@ public class MainActivity extends AppCompatActivity {
 
         builder.setView(input);
 
-        builder.setPositiveButton("Create Tab", (dialog, which) -> {
+        builder.setPositiveButton(withCollection ? "Next: Select Collection" : "Create Tab", (dialog, which) -> {
             String tags = input.getText().toString().trim();
             if (tags.isEmpty()) {
                 Toast.makeText(this, "Please enter at least one tag", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // Add new tag-based tab
-            tabStateManager.addTagTab(tags);
-            refreshTabs();
+            if (withCollection) {
+                // Store tags and show collection selector
+                pendingTags = tags;
+                if (!NetworkUtils.isNetworkAvailable(this)) {
+                    Toast.makeText(this, "No internet connection. Cannot fetch collections.",
+                            Toast.LENGTH_LONG).show();
+                    pendingTags = null;
+                    return;
+                }
+                Intent intent = new Intent(this, CollectionTreeActivity.class);
+                startActivityForResult(intent, REQUEST_CODE_SELECT_COLLECTION_WITH_TAGS);
+            } else {
+                // Add new tag-only tab
+                tabStateManager.addTagTab(tags);
+                refreshTabs();
 
-            // Switch to the new tab
-            List<TabStateManager.TabInfo> allTabs = tabStateManager.getOpenTabs();
-            viewPager.setCurrentItem(allTabs.size() - 1, true);
+                // Switch to the new tab
+                List<TabStateManager.TabInfo> allTabs = tabStateManager.getOpenTabs();
+                viewPager.setCurrentItem(allTabs.size() - 1, true);
 
-            Toast.makeText(this, "Created tag filter: " + tags, Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Created tag filter: " + tags, Toast.LENGTH_SHORT).show();
+            }
         });
 
         builder.setNegativeButton("Cancel", null);
@@ -441,6 +459,28 @@ public class MainActivity extends AppCompatActivity {
 
             Toast.makeText(this, "Opened " + collectionName + " in new tab",
                     Toast.LENGTH_SHORT).show();
+        } else if (requestCode == REQUEST_CODE_SELECT_COLLECTION_WITH_TAGS && resultCode == RESULT_OK) {
+            String collectionKey = userPreferences.getSelectedCollectionKey();
+            String collectionName = userPreferences.getSelectedCollectionName();
+
+            if (collectionName == null || collectionName.isEmpty()) {
+                collectionName = "All Collections";
+            }
+
+            // Add new tab with both collection and tags
+            if (pendingTags != null) {
+                tabStateManager.addTab(collectionKey, collectionName, pendingTags);
+                refreshTabs();
+
+                // Switch to the new tab
+                List<TabStateManager.TabInfo> tabs = tabStateManager.getOpenTabs();
+                viewPager.setCurrentItem(tabs.size() - 1, true);
+
+                Toast.makeText(this, "Opened " + collectionName + " with tags: " + pendingTags,
+                        Toast.LENGTH_SHORT).show();
+
+                pendingTags = null;
+            }
         }
     }
 

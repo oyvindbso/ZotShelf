@@ -106,7 +106,7 @@ public class ZoteroApiClient {
                 @Query("itemType") String itemType,
                 @Query("start") int start,
                 @Query("limit") int limit,
-                @Query("tag") String tag
+                @Query("tag") List<String> tags
         );
 
         @GET("users/{userId}/collections/{collectionKey}/items")
@@ -118,7 +118,7 @@ public class ZoteroApiClient {
                 @Query("itemType") String itemType,
                 @Query("start") int start,
                 @Query("limit") int limit,
-                @Query("tag") String tag
+                @Query("tag") List<String> tags
         );
         
         @GET
@@ -740,11 +740,12 @@ public class ZoteroApiClient {
                                           ZoteroCallback<List<ZoteroItem>> callback) {
 
         Call<List<ZoteroItem>> call;
+        List<String> tagList = parseTagsToList(tags);
 
         if (collectionKey == null || collectionKey.isEmpty()) {
-            call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100, tags);
+            call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100, tagList);
         } else {
-            call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100, tags);
+            call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100, tagList);
         }
         
         try {
@@ -867,4 +868,25 @@ public void getAllEbookItemsWithMetadata(String userId, String apiKey, String co
         getAllEbookItemsByCollection(userId, apiKey, collectionKey, tags, ebookCallback);
     }
 }
+
+    /**
+     * Convert semicolon-separated tags string into a List for Zotero API
+     * Zotero API requires multiple tag parameters for AND logic
+     */
+    private List<String> parseTagsToList(String tags) {
+        if (tags == null || tags.trim().isEmpty()) {
+            return null;
+        }
+
+        List<String> tagList = new ArrayList<>();
+        String[] tagArray = tags.split(";");
+        for (String tag : tagArray) {
+            String trimmed = tag.trim();
+            if (!trimmed.isEmpty()) {
+                tagList.add(trimmed);
+            }
+        }
+
+        return tagList.isEmpty() ? null : tagList;
+    }
 }
