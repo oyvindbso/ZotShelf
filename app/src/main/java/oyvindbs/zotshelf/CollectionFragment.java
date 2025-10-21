@@ -1,5 +1,8 @@
 package oyvindbs.zotshelf;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -13,6 +16,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -45,6 +49,7 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
     private UserPreferences userPreferences;
     private EpubCoverRepository coverRepository;
     private boolean isOfflineMode = false;
+    private DiagnosticInfo lastDiagnosticInfo;
 
     public static CollectionFragment newInstance(String collectionKey, String collectionName) {
         return newInstance(collectionKey, collectionName, null);
@@ -191,6 +196,9 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         String userId = userPreferences.getZoteroUserId();
         String apiKey = userPreferences.getZoteroApiKey();
 
+        // Prepare diagnostic info
+        prepareDiagnosticInfo();
+
         Log.d("CollectionFragment", "Loading covers from API - Collection: " + collectionKey + ", Tags: " + tags);
 
         zoteroApiClient.getAllEbookItemsWithMetadata(userId, apiKey, collectionKey, tags,
@@ -198,6 +206,13 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
             @Override
             public void onSuccess(List<ZoteroItem> zoteroItems) {
                 Log.d("CollectionFragment", "Received " + zoteroItems.size() + " items from API");
+
+                // Update diagnostic info
+                if (lastDiagnosticInfo != null) {
+                    lastDiagnosticInfo.setItemsReceived(zoteroItems.size());
+                    lastDiagnosticInfo.setHttpResponseCode(200);
+                }
+
                 processZoteroItems(zoteroItems);
             }
 
@@ -206,16 +221,42 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                 Log.e("CollectionFragment", "Error loading covers: " + errorMessage);
                 if (getActivity() == null) return;
 
+                // Update diagnostic info with error
+                if (lastDiagnosticInfo != null) {
+                    lastDiagnosticInfo.setErrorMessage(errorMessage);
+                    // Try to extract HTTP code from error message
+                    if (errorMessage.contains("HTTP ")) {
+                        try {
+                            int codeStart = errorMessage.indexOf("HTTP ") + 5;
+                            int codeEnd = errorMessage.indexOf(" ", codeStart);
+                            if (codeEnd == -1) codeEnd = errorMessage.length();
+                            String codeStr = errorMessage.substring(codeStart, codeEnd);
+                            lastDiagnosticInfo.setHttpResponseCode(Integer.parseInt(codeStr));
+                        } catch (Exception e) {
+                            // Couldn't parse code, that's fine
+                        }
+                    }
+                }
+
                 getActivity().runOnUiThread(() -> {
                     coverRepository.hasCachedCovers(hasCovers -> {
                         if (hasCovers) {
                             loadCachedCovers();
-                            Toast.makeText(requireContext(),
+                            // Show error dialog if tags are being used
+                            if (tags != null && !tags.isEmpty()) {
+                                showErrorDialog("Tag Filter Error",
+                                    "Failed to load items with tag filter.\n\n" + errorMessage +
+                                    "\n\nShowing cached data instead.\n\nClick 'Show Diagnostics' for more details.");
+                            } else {
+                                Toast.makeText(requireContext(),
                                     "Failed to update from Zotero: " + errorMessage,
                                     Toast.LENGTH_LONG).show();
+                            }
                         } else {
-                            showEmptyState("Error: " + errorMessage);
+                            progressBar.setVisibility(View.GONE);
                             swipeRefreshLayout.setRefreshing(false);
+                            // Always show error dialog for better visibility
+                            showErrorDialog("Error Loading Items", errorMessage);
                         }
                     });
                 });
@@ -322,9 +363,32 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         if (zoteroItems.isEmpty()) {
             if (getActivity() == null) return;
 
+            // Update diagnostic info
+            if (lastDiagnosticInfo != null) {
+                lastDiagnosticInfo.setItemsFiltered(0);
+            }
+
             getActivity().runOnUiThread(() -> {
-                showEmptyState("No EPUB or PDF files found matching your filters");
+                progressBar.setVisibility(View.GONE);
                 swipeRefreshLayout.setRefreshing(false);
+
+                // Show diagnostic dialog if using tags, otherwise show simple empty state
+                if (tags != null && !tags.isEmpty()) {
+                    StringBuilder message = new StringBuilder();
+                    message.append("No items found matching your filters.\n\n");
+                    message.append("This could mean:\n");
+                    message.append("• The tags don't exist in your library\n");
+                    message.append("• Tag names are case-sensitive (check capitalization)\n");
+                    message.append("• No items have ALL the specified tags\n");
+                    if (collectionKey != null && !collectionKey.isEmpty()) {
+                        message.append("• The collection doesn't have items with these tags\n");
+                    }
+                    message.append("\nTags entered: ").append(tags);
+
+                    showErrorDialog("No Items Found", message.toString());
+                } else {
+                    showEmptyState("No EPUB or PDF files found matching your filters");
+                }
             });
             return;
         }
@@ -525,5 +589,81 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                 }
             }
         });
+    }
+
+    /**
+     * Show an error dialog with diagnostic information
+     */
+    private void showErrorDialog(String title, String message) {
+        if (getActivity() == null) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle(title);
+        builder.setMessage(message);
+        builder.setPositiveButton("OK", null);
+
+        // Add diagnostics button if we have diagnostic info
+        if (lastDiagnosticInfo != null && (tags != null && !tags.isEmpty())) {
+            builder.setNeutralButton("Show Diagnostics", (dialog, which) -> {
+                showDiagnosticsDialog();
+            });
+        }
+
+        builder.show();
+    }
+
+    /**
+     * Show detailed diagnostics in a dialog
+     */
+    private void showDiagnosticsDialog() {
+        if (getActivity() == null || lastDiagnosticInfo == null) return;
+
+        String diagnosticReport = lastDiagnosticInfo.generateReport();
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("Diagnostic Information");
+        builder.setMessage(diagnosticReport);
+        builder.setPositiveButton("Close", null);
+        builder.setNegativeButton("Copy to Clipboard", (dialog, which) -> {
+            ClipboardManager clipboard = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("ZotShelf Diagnostics", diagnosticReport);
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(requireContext(), "Diagnostics copied to clipboard", Toast.LENGTH_SHORT).show();
+        });
+
+        builder.show();
+    }
+
+    /**
+     * Create and populate diagnostic info for the current API call
+     */
+    private void prepareDiagnosticInfo() {
+        lastDiagnosticInfo = new DiagnosticInfo();
+        lastDiagnosticInfo.setTags(tags);
+        lastDiagnosticInfo.setCollectionKey(collectionKey);
+        lastDiagnosticInfo.setCollectionName(collectionName);
+
+        // Construct approximate API URL for diagnostics
+        String userId = userPreferences.getZoteroUserId();
+        StringBuilder urlBuilder = new StringBuilder("https://api.zotero.org/users/");
+        urlBuilder.append(userId);
+
+        if (collectionKey != null && !collectionKey.isEmpty()) {
+            urlBuilder.append("/collections/").append(collectionKey);
+        }
+
+        urlBuilder.append("/items?format=json&itemType=attachment");
+
+        if (tags != null && !tags.isEmpty()) {
+            String[] tagArray = tags.split(";");
+            for (String tag : tagArray) {
+                String trimmed = tag.trim();
+                if (!trimmed.isEmpty()) {
+                    urlBuilder.append("&tag=").append(trimmed.replace(" ", "%20"));
+                }
+            }
+        }
+
+        lastDiagnosticInfo.setApiUrl(urlBuilder.toString());
     }
 }
