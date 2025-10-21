@@ -105,12 +105,33 @@ public class ZoteroApiClient {
                 @Query("format") String format,
                 @Query("itemType") String itemType,
                 @Query("start") int start,
+                @Query("limit") int limit
+        );
+
+        @GET("users/{userId}/items")
+        Call<List<ZoteroItem>> getItemsPaginatedWithTags(
+                @Path("userId") String userId,
+                @Header("Zotero-API-Key") String apiKey,
+                @Query("format") String format,
+                @Query("itemType") String itemType,
+                @Query("start") int start,
                 @Query("limit") int limit,
                 @Query("tag") List<String> tags
         );
 
         @GET("users/{userId}/collections/{collectionKey}/items")
         Call<List<ZoteroItem>> getItemsByCollectionPaginated(
+                @Path("userId") String userId,
+                @Path("collectionKey") String collectionKey,
+                @Header("Zotero-API-Key") String apiKey,
+                @Query("format") String format,
+                @Query("itemType") String itemType,
+                @Query("start") int start,
+                @Query("limit") int limit
+        );
+
+        @GET("users/{userId}/collections/{collectionKey}/items")
+        Call<List<ZoteroItem>> getItemsByCollectionPaginatedWithTags(
                 @Path("userId") String userId,
                 @Path("collectionKey") String collectionKey,
                 @Header("Zotero-API-Key") String apiKey,
@@ -742,17 +763,32 @@ public class ZoteroApiClient {
         Call<List<ZoteroItem>> call;
         List<String> tagList = parseTagsToList(tags);
 
-        if (collectionKey == null || collectionKey.isEmpty()) {
-            call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100, tagList);
+        Log.d(TAG, "Fetching items with tags: " + tags + " -> parsed to list: " + tagList);
+
+        // Use different API methods based on whether we have tags
+        if (tagList != null && !tagList.isEmpty()) {
+            // With tags
+            if (collectionKey == null || collectionKey.isEmpty()) {
+                call = zoteroService.getItemsPaginatedWithTags(userId, apiKey, "json", "attachment", start, 100, tagList);
+            } else {
+                call = zoteroService.getItemsByCollectionPaginatedWithTags(userId, collectionKey, apiKey, "json", "attachment", start, 100, tagList);
+            }
         } else {
-            call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100, tagList);
+            // Without tags
+            if (collectionKey == null || collectionKey.isEmpty()) {
+                call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100);
+            } else {
+                call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100);
+            }
         }
-        
+
+        Log.d(TAG, "API Request URL: " + call.request().url());
+
         try {
             Response<List<ZoteroItem>> response = call.execute();
             if (response.isSuccessful() && response.body() != null) {
                 List<ZoteroItem> items = response.body();
-                
+
                 List<ZoteroItem> filteredItems = filterItemsByUserPreferences(items);
                 allItems.addAll(filteredItems);
 
@@ -763,7 +799,16 @@ public class ZoteroApiClient {
                     callback.onSuccess(allItems);
                 }
             } else {
-                callback.onError("Failed to fetch items: " + response.code());
+                String errorMsg = "Failed to fetch items: HTTP " + response.code();
+                try {
+                    if (response.errorBody() != null) {
+                        errorMsg = response.errorBody().string();
+                        Log.e(TAG, "API Error Response: " + errorMsg);
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "Could not read error body", e);
+                }
+                callback.onError(errorMsg);
             }
         } catch (IOException e) {
             Log.e(TAG, "API error", e);
