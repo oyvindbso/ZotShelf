@@ -120,20 +120,49 @@ public class EpubCoverRepository {
         });
     }
 
+    public void getFilteredCoversForCollection(String collectionKey, CoverRepositoryCallback callback) {
+        executor.execute(() -> {
+            try {
+                List<EpubCoverEntity> entities = getFilteredEntitiesForCollection(collectionKey);
+                List<EpubCoverItem> coverItems = convertEntitiesToCoverItems(entities);
+                mainHandler.post(() -> callback.onCoversLoaded(coverItems));
+            } catch (Exception e) {
+                Log.e(TAG, "Error loading filtered covers for collection", e);
+                mainHandler.post(() -> callback.onError("Error loading covers: " + e.getMessage()));
+            }
+        });
+    }
+
     private List<EpubCoverEntity> getFilteredEntities() {
         boolean booksOnly = userPreferences.getBooksOnly();
         boolean showEpubs = userPreferences.getShowEpubs();
         boolean showPdfs = userPreferences.getShowPdfs();
         String collectionKey = userPreferences.getSelectedCollectionKey();
-        
+
         List<EpubCoverEntity> entities;
         if (collectionKey != null && !collectionKey.isEmpty()) {
             entities = database.epubCoverDao().getCoversByCollection(collectionKey, booksOnly, showEpubs, showPdfs);
         } else {
             entities = database.epubCoverDao().getCoversByPreferences(booksOnly, showEpubs, showPdfs);
         }
-        
+
         Log.d(TAG, "Loaded " + entities.size() + " covers from database with filters applied");
+        return entities;
+    }
+
+    private List<EpubCoverEntity> getFilteredEntitiesForCollection(String collectionKey) {
+        boolean booksOnly = userPreferences.getBooksOnly();
+        boolean showEpubs = userPreferences.getShowEpubs();
+        boolean showPdfs = userPreferences.getShowPdfs();
+
+        List<EpubCoverEntity> entities;
+        if (collectionKey != null && !collectionKey.isEmpty()) {
+            entities = database.epubCoverDao().getCoversByCollection(collectionKey, booksOnly, showEpubs, showPdfs);
+        } else {
+            entities = database.epubCoverDao().getCoversByPreferences(booksOnly, showEpubs, showPdfs);
+        }
+
+        Log.d(TAG, "Loaded " + entities.size() + " covers for collection " + collectionKey);
         return entities;
     }
 

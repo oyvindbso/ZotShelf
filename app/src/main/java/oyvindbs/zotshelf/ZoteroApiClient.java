@@ -108,6 +108,17 @@ public class ZoteroApiClient {
                 @Query("limit") int limit
         );
 
+        @GET("users/{userId}/items")
+        Call<List<ZoteroItem>> getItemsPaginatedWithTags(
+                @Path("userId") String userId,
+                @Header("Zotero-API-Key") String apiKey,
+                @Query("format") String format,
+                @Query("itemType") String itemType,
+                @Query("start") int start,
+                @Query("limit") int limit,
+                @Query("tag") List<String> tags
+        );
+
         @GET("users/{userId}/collections/{collectionKey}/items")
         Call<List<ZoteroItem>> getItemsByCollectionPaginated(
                 @Path("userId") String userId,
@@ -117,6 +128,18 @@ public class ZoteroApiClient {
                 @Query("itemType") String itemType,
                 @Query("start") int start,
                 @Query("limit") int limit
+        );
+
+        @GET("users/{userId}/collections/{collectionKey}/items")
+        Call<List<ZoteroItem>> getItemsByCollectionPaginatedWithTags(
+                @Path("userId") String userId,
+                @Path("collectionKey") String collectionKey,
+                @Header("Zotero-API-Key") String apiKey,
+                @Query("format") String format,
+                @Query("itemType") String itemType,
+                @Query("start") int start,
+                @Query("limit") int limit,
+                @Query("tag") List<String> tags
         );
         
         @GET
@@ -720,43 +743,72 @@ public class ZoteroApiClient {
     }
 
     public void getAllEbookItemsByCollection(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+        getAllEbookItemsByCollection(userId, apiKey, collectionKey, null, callback);
+    }
+
+    public void getAllEbookItemsByCollection(String userId, String apiKey, String collectionKey, String tags, ZoteroCallback<List<ZoteroItem>> callback) {
         executor.execute(() -> {
             if (collectionKey == null || collectionKey.isEmpty()) {
-                getAllEbookItems(userId, apiKey, callback);
+                getAllEbookItems(userId, apiKey, tags, callback);
                 return;
             }
-            getAllEbookItemsPaginated(userId, apiKey, collectionKey, new ArrayList<>(), 0, callback);
+            getAllEbookItemsPaginated(userId, apiKey, collectionKey, tags, new ArrayList<>(), 0, callback);
         });
     }
 
-    private void getAllEbookItemsPaginated(String userId, String apiKey, String collectionKey, 
-                                          List<ZoteroItem> allItems, int start, 
+    private void getAllEbookItemsPaginated(String userId, String apiKey, String collectionKey, String tags,
+                                          List<ZoteroItem> allItems, int start,
                                           ZoteroCallback<List<ZoteroItem>> callback) {
-        
+
         Call<List<ZoteroItem>> call;
-        
-        if (collectionKey == null || collectionKey.isEmpty()) {
-            call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100);
+        List<String> tagList = parseTagsToList(tags);
+
+        Log.d(TAG, "Fetching items with tags: " + tags + " -> parsed to list: " + tagList);
+
+        // Use different API methods based on whether we have tags
+        if (tagList != null && !tagList.isEmpty()) {
+            // With tags
+            if (collectionKey == null || collectionKey.isEmpty()) {
+                call = zoteroService.getItemsPaginatedWithTags(userId, apiKey, "json", "attachment", start, 100, tagList);
+            } else {
+                call = zoteroService.getItemsByCollectionPaginatedWithTags(userId, collectionKey, apiKey, "json", "attachment", start, 100, tagList);
+            }
         } else {
-            call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100);
+            // Without tags
+            if (collectionKey == null || collectionKey.isEmpty()) {
+                call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100);
+            } else {
+                call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100);
+            }
         }
-        
+
+        Log.d(TAG, "API Request URL: " + call.request().url());
+
         try {
             Response<List<ZoteroItem>> response = call.execute();
             if (response.isSuccessful() && response.body() != null) {
                 List<ZoteroItem> items = response.body();
-                
+
                 List<ZoteroItem> filteredItems = filterItemsByUserPreferences(items);
                 allItems.addAll(filteredItems);
-                
+
                 if (items.size() == 100) {
-                    getAllEbookItemsPaginated(userId, apiKey, collectionKey, allItems, start + 100, callback);
+                    getAllEbookItemsPaginated(userId, apiKey, collectionKey, tags, allItems, start + 100, callback);
                 } else {
                     Log.d(TAG, "Fetched total of " + allItems.size() + " ebook items");
                     callback.onSuccess(allItems);
                 }
             } else {
-                callback.onError("Failed to fetch items: " + response.code());
+                String errorMsg = "Failed to fetch items: HTTP " + response.code();
+                try {
+                    if (response.errorBody() != null) {
+                        errorMsg = response.errorBody().string();
+                        Log.e(TAG, "API Error Response: " + errorMsg);
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "Could not read error body", e);
+                }
+                callback.onError(errorMsg);
             }
         } catch (IOException e) {
             Log.e(TAG, "API error", e);
@@ -764,12 +816,20 @@ public class ZoteroApiClient {
         }
     }
 public void getAllEbookItems(String userId, String apiKey, ZoteroCallback<List<ZoteroItem>> callback) {
+    getAllEbookItems(userId, apiKey, null, callback);
+}
+
+public void getAllEbookItems(String userId, String apiKey, String tags, ZoteroCallback<List<ZoteroItem>> callback) {
     executor.execute(() -> {
-        getAllEbookItemsPaginated(userId, apiKey, null, new ArrayList<>(), 0, callback);
+        getAllEbookItemsPaginated(userId, apiKey, null, tags, new ArrayList<>(), 0, callback);
     });
 }
 
 public void getAllEbookItemsWithMetadata(String userId, String apiKey, String collectionKey, ZoteroCallback<List<ZoteroItem>> callback) {
+    getAllEbookItemsWithMetadata(userId, apiKey, collectionKey, null, callback);
+}
+
+public void getAllEbookItemsWithMetadata(String userId, String apiKey, String collectionKey, String tags, ZoteroCallback<List<ZoteroItem>> callback) {
     ZoteroCallback<List<ZoteroItem>> ebookCallback = new ZoteroCallback<List<ZoteroItem>>() {
         @Override
         public void onSuccess(List<ZoteroItem> ebookItems) {
@@ -846,11 +906,32 @@ public void getAllEbookItemsWithMetadata(String userId, String apiKey, String co
             callback.onError(errorMessage);
         }
     };
-    
+
     if (collectionKey == null || collectionKey.isEmpty()) {
-        getAllEbookItems(userId, apiKey, ebookCallback);
+        getAllEbookItems(userId, apiKey, tags, ebookCallback);
     } else {
-        getAllEbookItemsByCollection(userId, apiKey, collectionKey, ebookCallback);
+        getAllEbookItemsByCollection(userId, apiKey, collectionKey, tags, ebookCallback);
     }
-} 
+}
+
+    /**
+     * Convert semicolon-separated tags string into a List for Zotero API
+     * Zotero API requires multiple tag parameters for AND logic
+     */
+    private List<String> parseTagsToList(String tags) {
+        if (tags == null || tags.trim().isEmpty()) {
+            return null;
+        }
+
+        List<String> tagList = new ArrayList<>();
+        String[] tagArray = tags.split(";");
+        for (String tag : tagArray) {
+            String trimmed = tag.trim();
+            if (!trimmed.isEmpty()) {
+                tagList.add(trimmed);
+            }
+        }
+
+        return tagList.isEmpty() ? null : tagList;
+    }
 }
