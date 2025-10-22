@@ -206,19 +206,45 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         String userId = userPreferences.getZoteroUserId();
         String apiKey = userPreferences.getZoteroApiKey();
 
-        Log.d("CollectionFragment", "Loading covers from API - Collection: " + collectionKey + ", Tags: " + tags);
+        Log.d("CollectionFragment", "=== LOADING COVERS FROM API ===");
+        Log.d("CollectionFragment", "Collection Key: " + collectionKey);
+        Log.d("CollectionFragment", "Collection Name: " + collectionName);
+        Log.d("CollectionFragment", "Tags (raw): '" + tags + "'");
+        Log.d("CollectionFragment", "User ID: " + userId);
+        Log.d("CollectionFragment", "Show EPUBs: " + userPreferences.getShowEpubs());
+        Log.d("CollectionFragment", "Show PDFs: " + userPreferences.getShowPdfs());
+        Log.d("CollectionFragment", "Books Only: " + userPreferences.getBooksOnly());
+
+        // Show a toast with the tags for debugging
+        if (tags != null && !tags.trim().isEmpty() && getActivity() != null) {
+            getActivity().runOnUiThread(() -> {
+                Toast.makeText(requireContext(),
+                    "Loading items with tags: " + tags,
+                    Toast.LENGTH_LONG).show();
+            });
+        }
 
         zoteroApiClient.getAllEbookItemsWithMetadata(userId, apiKey, collectionKey, tags,
                 new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
             @Override
             public void onSuccess(List<ZoteroItem> zoteroItems) {
+                Log.d("CollectionFragment", "=== API SUCCESS ===");
                 Log.d("CollectionFragment", "Received " + zoteroItems.size() + " items from API");
+
+                // Log first few items for debugging
+                for (int i = 0; i < Math.min(3, zoteroItems.size()); i++) {
+                    ZoteroItem item = zoteroItems.get(i);
+                    Log.d("CollectionFragment", "Item " + i + ": " + item.getTitle() +
+                          " (Type: " + item.getMimeType() + ")");
+                }
+
                 processZoteroItems(zoteroItems);
             }
 
             @Override
             public void onError(String errorMessage) {
-                Log.e("CollectionFragment", "Error loading covers: " + errorMessage);
+                Log.e("CollectionFragment", "=== API ERROR ===");
+                Log.e("CollectionFragment", "Error: " + errorMessage);
                 if (getActivity() == null) return;
 
                 getActivity().runOnUiThread(() -> {

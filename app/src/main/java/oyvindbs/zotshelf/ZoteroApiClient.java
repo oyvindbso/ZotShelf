@@ -751,15 +751,17 @@ public class ZoteroApiClient {
 
         // Use different API methods based on whether we have tags
         if (tagList != null && !tagList.isEmpty()) {
+            // IMPORTANT: Tags in Zotero are on parent items, not attachments!
+            // So we search for ALL items with tags, then filter to attachments
             // Build URL manually to ensure proper tag parameter formatting
-            // Zotero API needs: ?tag=fiction&tag=sci-fi (multiple tag parameters)
             StringBuilder urlBuilder = new StringBuilder(BASE_URL + "users/" + userId);
 
             if (collectionKey != null && !collectionKey.isEmpty()) {
                 urlBuilder.append("/collections/").append(collectionKey);
             }
 
-            urlBuilder.append("/items?format=json&itemType=attachment");
+            // Note: NO itemType=attachment filter here! We need to get parent items with tags
+            urlBuilder.append("/items?format=json");
             urlBuilder.append("&start=").append(start);
             urlBuilder.append("&limit=100");
 
@@ -774,7 +776,7 @@ public class ZoteroApiClient {
             }
 
             String url = urlBuilder.toString();
-            Log.d(TAG, "Built URL with tags: " + url);
+            Log.d(TAG, "Built URL with tags (searching ALL items, will filter to attachments): " + url);
             call = zoteroService.getItemsWithDynamicUrl(url, apiKey);
         } else {
             // Without tags - use regular methods
@@ -927,19 +929,28 @@ public void getAllEbookItemsWithMetadata(String userId, String apiKey, String co
      * Zotero API requires multiple tag parameters for AND logic
      */
     private List<String> parseTagsToList(String tags) {
+        Log.d(TAG, "parseTagsToList - Input: '" + tags + "'");
+
         if (tags == null || tags.trim().isEmpty()) {
+            Log.d(TAG, "parseTagsToList - Input is null or empty, returning null");
             return null;
         }
 
         List<String> tagList = new ArrayList<>();
         String[] tagArray = tags.split(";");
-        for (String tag : tagArray) {
+
+        Log.d(TAG, "parseTagsToList - Split into " + tagArray.length + " parts");
+
+        for (int i = 0; i < tagArray.length; i++) {
+            String tag = tagArray[i];
             String trimmed = tag.trim();
+            Log.d(TAG, "parseTagsToList - Part " + i + ": '" + tag + "' -> trimmed: '" + trimmed + "'");
             if (!trimmed.isEmpty()) {
                 tagList.add(trimmed);
             }
         }
 
+        Log.d(TAG, "parseTagsToList - Final list size: " + tagList.size() + ", tags: " + tagList);
         return tagList.isEmpty() ? null : tagList;
     }
 }
