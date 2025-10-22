@@ -732,12 +732,175 @@ public class ZoteroApiClient {
 
     public void getAllEbookItemsByCollection(String userId, String apiKey, String collectionKey, String tags, ZoteroCallback<List<ZoteroItem>> callback) {
         executor.execute(() -> {
-            if (collectionKey == null || collectionKey.isEmpty()) {
-                getAllEbookItems(userId, apiKey, tags, callback);
-                return;
+            // Special handling for tag filtering
+            if (tags != null && !tags.trim().isEmpty()) {
+                getAllEbookItemsWithTagFilter(userId, apiKey, collectionKey, tags, callback);
+            } else {
+                // No tags - use regular pagination
+                if (collectionKey == null || collectionKey.isEmpty()) {
+                    getAllEbookItems(userId, apiKey, tags, callback);
+                    return;
+                }
+                getAllEbookItemsPaginated(userId, apiKey, collectionKey, tags, new ArrayList<>(), 0, callback);
             }
-            getAllEbookItemsPaginated(userId, apiKey, collectionKey, tags, new ArrayList<>(), 0, callback);
         });
+    }
+
+    /**
+     * Get ebook items by finding parent items with tags, then getting their attachments
+     */
+    private void getAllEbookItemsWithTagFilter(String userId, String apiKey, String collectionKey, String tags, ZoteroCallback<List<ZoteroItem>> callback) {
+        Log.d(TAG, "=== Getting items with tag filter ===");
+        Log.d(TAG, "Tags: " + tags);
+        Log.d(TAG, "Collection: " + collectionKey);
+
+        // Step 1: Get parent items (books, articles) that have these tags
+        getParentItemsWithTags(userId, apiKey, collectionKey, tags, new ZoteroCallback<List<ZoteroItem>>() {
+            @Override
+            public void onSuccess(List<ZoteroItem> parentItems) {
+                Log.d(TAG, "Found " + parentItems.size() + " parent items with tags");
+
+                if (parentItems.isEmpty()) {
+                    callback.onSuccess(new ArrayList<>());
+                    return;
+                }
+
+                // Step 2: Get attachments for each parent item
+                getAttachmentsForParentItems(userId, apiKey, parentItems, callback);
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                callback.onError(errorMessage);
+            }
+        });
+    }
+
+    /**
+     * Get parent items (books, articles, etc.) that have the specified tags
+     */
+    private void getParentItemsWithTags(String userId, String apiKey, String collectionKey, String tags, ZoteroCallback<List<ZoteroItem>> callback) {
+        List<String> tagList = parseTagsToList(tags);
+
+        if (tagList == null || tagList.isEmpty()) {
+            callback.onSuccess(new ArrayList<>());
+            return;
+        }
+
+        // Build URL for parent items with tags
+        StringBuilder urlBuilder = new StringBuilder(BASE_URL + "users/" + userId);
+
+        if (collectionKey != null && !collectionKey.isEmpty()) {
+            urlBuilder.append("/collections/").append(collectionKey);
+        }
+
+        urlBuilder.append("/items/top?format=json"); // /top gets only top-level items (not children)
+
+        // Add tag parameters
+        for (String tag : tagList) {
+            try {
+                String encodedTag = java.net.URLEncoder.encode(tag, "UTF-8");
+                urlBuilder.append("&tag=").append(encodedTag);
+            } catch (java.io.UnsupportedEncodingException e) {
+                Log.e(TAG, "Error encoding tag: " + tag, e);
+            }
+        }
+
+        String url = urlBuilder.toString();
+        Log.d(TAG, "Fetching parent items with tags: " + url);
+
+        Call<List<ZoteroItem>> call = zoteroService.getItemsWithDynamicUrl(url, apiKey);
+
+        try {
+            Response<List<ZoteroItem>> response = call.execute();
+            if (response.isSuccessful() && response.body() != null) {
+                List<ZoteroItem> items = response.body();
+                Log.d(TAG, "Received " + items.size() + " parent items");
+                callback.onSuccess(items);
+            } else {
+                String errorMsg = "Failed to fetch parent items: HTTP " + response.code();
+                try {
+                    if (response.errorBody() != null) {
+                        errorMsg = response.errorBody().string();
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "Could not read error body", e);
+                }
+                callback.onError(errorMsg);
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "API error", e);
+            callback.onError("Network error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get child attachments for a list of parent items
+     */
+    private void getAttachmentsForParentItems(String userId, String apiKey, List<ZoteroItem> parentItems, ZoteroCallback<List<ZoteroItem>> callback) {
+        List<ZoteroItem> allAttachments = new ArrayList<>();
+        final int[] itemsProcessed = {0};
+        final int totalItems = parentItems.size();
+
+        for (ZoteroItem parentItem : parentItems) {
+            getChildAttachments(userId, apiKey, parentItem.getKey(), new ZoteroCallback<List<ZoteroItem>>() {
+                @Override
+                public void onSuccess(List<ZoteroItem> attachments) {
+                    synchronized (allAttachments) {
+                        // Filter to EPUB/PDF only
+                        List<ZoteroItem> filtered = filterItemsByUserPreferences(attachments);
+                        Log.d(TAG, "Parent " + parentItem.getKey() + " has " + attachments.size() +
+                              " attachments, " + filtered.size() + " after filtering");
+
+                        // Set parent reference for each attachment
+                        for (ZoteroItem attachment : filtered) {
+                            attachment.setParentItem(parentItem);
+                        }
+
+                        allAttachments.addAll(filtered);
+                        itemsProcessed[0]++;
+
+                        if (itemsProcessed[0] == totalItems) {
+                            Log.d(TAG, "Finished processing all parents. Total attachments: " + allAttachments.size());
+                            callback.onSuccess(allAttachments);
+                        }
+                    }
+                }
+
+                @Override
+                public void onError(String errorMessage) {
+                    Log.e(TAG, "Error getting attachments for parent " + parentItem.getKey() + ": " + errorMessage);
+                    // Continue processing other items even if one fails
+                    synchronized (allAttachments) {
+                        itemsProcessed[0]++;
+                        if (itemsProcessed[0] == totalItems) {
+                            callback.onSuccess(allAttachments);
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Get child items (attachments) for a specific parent item
+     */
+    private void getChildAttachments(String userId, String apiKey, String parentKey, ZoteroCallback<List<ZoteroItem>> callback) {
+        String url = BASE_URL + "users/" + userId + "/items/" + parentKey + "/children?format=json";
+        Log.d(TAG, "Fetching children for parent " + parentKey + ": " + url);
+
+        Call<List<ZoteroItem>> call = zoteroService.getItemsWithDynamicUrl(url, apiKey);
+
+        try {
+            Response<List<ZoteroItem>> response = call.execute();
+            if (response.isSuccessful() && response.body() != null) {
+                callback.onSuccess(response.body());
+            } else {
+                callback.onError("Failed to fetch children: HTTP " + response.code());
+            }
+        } catch (IOException e) {
+            callback.onError("Network error: " + e.getMessage());
+        }
     }
 
     private void getAllEbookItemsPaginated(String userId, String apiKey, String collectionKey, String tags,
@@ -831,7 +994,12 @@ public void getAllEbookItems(String userId, String apiKey, ZoteroCallback<List<Z
 
 public void getAllEbookItems(String userId, String apiKey, String tags, ZoteroCallback<List<ZoteroItem>> callback) {
     executor.execute(() -> {
-        getAllEbookItemsPaginated(userId, apiKey, null, tags, new ArrayList<>(), 0, callback);
+        // Special handling for tag filtering
+        if (tags != null && !tags.trim().isEmpty()) {
+            getAllEbookItemsWithTagFilter(userId, apiKey, null, tags, callback);
+        } else {
+            getAllEbookItemsPaginated(userId, apiKey, null, tags, new ArrayList<>(), 0, callback);
+        }
     });
 }
 
