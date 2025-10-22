@@ -97,7 +97,7 @@ public class ZoteroApiClient {
                 @Query("itemType") String itemType,
                 @Query("limit") int limit
         );
-        
+
         @GET("users/{userId}/items")
         Call<List<ZoteroItem>> getItemsPaginated(
                 @Path("userId") String userId,
@@ -108,15 +108,11 @@ public class ZoteroApiClient {
                 @Query("limit") int limit
         );
 
-        @GET("users/{userId}/items")
-        Call<List<ZoteroItem>> getItemsPaginatedWithTags(
-                @Path("userId") String userId,
-                @Header("Zotero-API-Key") String apiKey,
-                @Query("format") String format,
-                @Query("itemType") String itemType,
-                @Query("start") int start,
-                @Query("limit") int limit,
-                @Query("tag") List<String> tags
+        // Using dynamic URL for tag filtering to ensure proper query parameter formatting
+        @GET
+        Call<List<ZoteroItem>> getItemsWithDynamicUrl(
+                @Url String url,
+                @Header("Zotero-API-Key") String apiKey
         );
 
         @GET("users/{userId}/collections/{collectionKey}/items")
@@ -128,18 +124,6 @@ public class ZoteroApiClient {
                 @Query("itemType") String itemType,
                 @Query("start") int start,
                 @Query("limit") int limit
-        );
-
-        @GET("users/{userId}/collections/{collectionKey}/items")
-        Call<List<ZoteroItem>> getItemsByCollectionPaginatedWithTags(
-                @Path("userId") String userId,
-                @Path("collectionKey") String collectionKey,
-                @Header("Zotero-API-Key") String apiKey,
-                @Query("format") String format,
-                @Query("itemType") String itemType,
-                @Query("start") int start,
-                @Query("limit") int limit,
-                @Query("tag") List<String> tags
         );
         
         @GET
@@ -763,39 +747,63 @@ public class ZoteroApiClient {
         Call<List<ZoteroItem>> call;
         List<String> tagList = parseTagsToList(tags);
 
-        Log.d(TAG, "Fetching items with tags: " + tags + " -> parsed to list: " + tagList);
+        Log.d(TAG, "Fetching items - Start: " + start + ", Tags: " + tags + " -> parsed to list: " + tagList);
 
         // Use different API methods based on whether we have tags
         if (tagList != null && !tagList.isEmpty()) {
-            // With tags
-            if (collectionKey == null || collectionKey.isEmpty()) {
-                call = zoteroService.getItemsPaginatedWithTags(userId, apiKey, "json", "attachment", start, 100, tagList);
-            } else {
-                call = zoteroService.getItemsByCollectionPaginatedWithTags(userId, collectionKey, apiKey, "json", "attachment", start, 100, tagList);
+            // Build URL manually to ensure proper tag parameter formatting
+            // Zotero API needs: ?tag=fiction&tag=sci-fi (multiple tag parameters)
+            StringBuilder urlBuilder = new StringBuilder(BASE_URL + "users/" + userId);
+
+            if (collectionKey != null && !collectionKey.isEmpty()) {
+                urlBuilder.append("/collections/").append(collectionKey);
             }
+
+            urlBuilder.append("/items?format=json&itemType=attachment");
+            urlBuilder.append("&start=").append(start);
+            urlBuilder.append("&limit=100");
+
+            // Add each tag as a separate parameter
+            for (String tag : tagList) {
+                try {
+                    String encodedTag = java.net.URLEncoder.encode(tag, "UTF-8");
+                    urlBuilder.append("&tag=").append(encodedTag);
+                } catch (java.io.UnsupportedEncodingException e) {
+                    Log.e(TAG, "Error encoding tag: " + tag, e);
+                }
+            }
+
+            String url = urlBuilder.toString();
+            Log.d(TAG, "Built URL with tags: " + url);
+            call = zoteroService.getItemsWithDynamicUrl(url, apiKey);
         } else {
-            // Without tags
+            // Without tags - use regular methods
             if (collectionKey == null || collectionKey.isEmpty()) {
                 call = zoteroService.getItemsPaginated(userId, apiKey, "json", "attachment", start, 100);
             } else {
                 call = zoteroService.getItemsByCollectionPaginated(userId, collectionKey, apiKey, "json", "attachment", start, 100);
             }
+            Log.d(TAG, "API Request URL (no tags): " + call.request().url());
         }
-
-        Log.d(TAG, "API Request URL: " + call.request().url());
 
         try {
             Response<List<ZoteroItem>> response = call.execute();
+            Log.d(TAG, "API Response Code: " + response.code());
+
             if (response.isSuccessful() && response.body() != null) {
                 List<ZoteroItem> items = response.body();
+                Log.d(TAG, "Received " + items.size() + " items from API (before filtering)");
 
                 List<ZoteroItem> filteredItems = filterItemsByUserPreferences(items);
+                Log.d(TAG, "After user preference filtering: " + filteredItems.size() + " items");
+
                 allItems.addAll(filteredItems);
 
                 if (items.size() == 100) {
+                    // More items available, fetch next page
                     getAllEbookItemsPaginated(userId, apiKey, collectionKey, tags, allItems, start + 100, callback);
                 } else {
-                    Log.d(TAG, "Fetched total of " + allItems.size() + " ebook items");
+                    Log.d(TAG, "Fetched total of " + allItems.size() + " ebook items (all pages)");
                     callback.onSuccess(allItems);
                 }
             } else {
