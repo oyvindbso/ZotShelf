@@ -10,9 +10,11 @@ The app is currently in closed beta testing. Contact me if you would like to tes
 
 1. Set up your Zotero credentials - Enter your Zotero username, user ID, and API key in the app settings
 2. Connect to your library - ZotShelf securely connects to your Zotero account and finds all your EPUB books.
-3. Extract covers - The app automatically extracts cover art from each EPUB file in your library.
-4. Browse your collection - Explore your digital bookshelf, filter by collections, and tap any cover to start reading.
-5. Stay updated - Pull down to refresh whenever you add new books to your Zotero library.
+3. Select a collection, tag(s) or a combination of a collection and tag(s).
+4. Extract covers - The app automatically extracts cover art from each EPUB file in your library.
+5. Browse your covers - Explore your digital bookshelf, and tap any cover to start reading.
+6. Zotshelf supports tabs, each with a different combination of collection and tags.
+7. Stay updated - Pull down to refresh whenever you add new books to your Zotero library.
 
 ## Getting Started
 
