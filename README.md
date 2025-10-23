@@ -2,7 +2,9 @@
 
 ZotShelf extracts covers from the EPUBs in your [Zotero](https://www.zotero.org) library and displays them in a beautiful, browsable grid. Quickly see your entire digital book collection at a glance and access your books with a single tap.
 
-The app is currently in closed beta testing. Contact me if you would like to test it at appbugge@gmail.com. There are some bugs with choosing collections. THe app does not show all the collections in the account.
+Zotshelf allows you to select a collection, a set of tags or a combination of a collection and tag(s).
+
+The app is currently in closed beta testing. Contact me if you would like to test it at appbugge@gmail.com. 
 
 ## How It Works
 
@@ -18,7 +20,7 @@ To use ZotShelf, you’ll need:
 
 - An Android device running Android 6.0 (Marshmallow) or newer
 - A Zotero account with EPUB books in your library
-- Your Zotero API key, username and User ID (available at https://www.zotero.org/settings/keys)
+- Your Zotero API key, username and User ID (available at https://www.zotero.org/settings/keys. Please select read only.)
 
 ## Technical Details
 
