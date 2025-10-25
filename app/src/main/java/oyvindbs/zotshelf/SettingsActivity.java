@@ -30,7 +30,10 @@ public class SettingsActivity extends AppCompatActivity {
     private RadioButton radioAuthorOnly;
     private RadioButton radioAuthorTitle;
     private Button buttonSave;
+    private Button buttonOAuthLogin;
     private UserPreferences userPreferences;
+
+    private static final int OAUTH_LOGIN_REQUEST = 1001;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +59,7 @@ public class SettingsActivity extends AppCompatActivity {
         radioAuthorOnly = findViewById(R.id.radioAuthorOnly);
         radioAuthorTitle = findViewById(R.id.radioAuthorTitle);
         buttonSave = findViewById(R.id.buttonSave);
+        buttonOAuthLogin = findViewById(R.id.buttonOAuthLogin);
 
         // Initialize preferences
         userPreferences = new UserPreferences(this);
@@ -65,6 +69,9 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Setup save button
         buttonSave.setOnClickListener(v -> savePreferences());
+
+        // Setup OAuth login button
+        buttonOAuthLogin.setOnClickListener(v -> startOAuthLogin());
     }
 
     @Override
@@ -161,5 +168,21 @@ public class SettingsActivity extends AppCompatActivity {
 
         Toast.makeText(this, R.string.settings_saved, Toast.LENGTH_SHORT).show();
         finish();
+    }
+
+    private void startOAuthLogin() {
+        Intent intent = new Intent(this, OAuthLoginActivity.class);
+        startActivityForResult(intent, OAUTH_LOGIN_REQUEST);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == OAUTH_LOGIN_REQUEST && resultCode == RESULT_OK) {
+            // OAuth login was successful, reload preferences to show the new credentials
+            loadPreferences();
+            Toast.makeText(this, "Successfully logged in with Zotero!", Toast.LENGTH_LONG).show();
+        }
     }
 }

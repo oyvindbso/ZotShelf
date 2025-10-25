@@ -38,7 +38,25 @@
             android:name=".CredentialVerificationActivity"
             android:label="Verify Zotero Credentials"
             android:parentActivityName=".SettingsActivity" />
-        
+
+        <activity
+            android:name=".OAuthLoginActivity"
+            android:label="Login to Zotero"
+            android:parentActivityName=".SettingsActivity"
+            android:launchMode="singleTask"
+            android:exported="true">
+            <!-- Intent filter to handle OAuth callback -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="zotshelf"
+                    android:host="oauth"
+                    android:path="/callback" />
+            </intent-filter>
+        </activity>
+
         <!-- Widget Provider -->
         <receiver android:name=".EpubCoversWidgetProvider" android:exported="true">
             <intent-filter>
