@@ -33,15 +33,73 @@ To enable OAuth login, you need to register your app with Zotero and configure t
 
 ### Step 2: Configure OAuth Credentials
 
-1. Open the file: `app/src/main/java/oyvindbs/zotshelf/ZoteroOAuthConfig.java`
-2. Replace the placeholder values with your actual credentials:
+OAuth credentials are now injected at build time from **environment variables**, making it safe for public repositories and CI/CD systems.
 
-```java
-public static final String CLIENT_KEY = "your_actual_client_key_here";
-public static final String CLIENT_SECRET = "your_actual_client_secret_here";
+#### Option A: Using Bitrise CI/CD (Recommended for Production)
+
+1. Go to your Bitrise app dashboard
+2. Navigate to **Workflow → Secrets**
+3. Add two secrets:
+   - **Key**: `ZOTERO_OAUTH_CLIENT_KEY` → **Value**: Your Client Key from Zotero
+   - **Key**: `ZOTERO_OAUTH_CLIENT_SECRET` → **Value**: Your Client Secret from Zotero
+4. Make sure both secrets are marked as:
+   - ✓ **Expose for Pull Requests** (if you want PRs to work with OAuth)
+   - ✓ **Stored securely** (encrypted)
+
+That's it! Bitrise will automatically inject these as environment variables during the build, and Gradle will read them to generate BuildConfig fields.
+
+#### Option B: Local Development
+
+For local builds, set environment variables before building:
+
+**On Linux/macOS:**
+```bash
+export ZOTERO_OAUTH_CLIENT_KEY="your_actual_client_key"
+export ZOTERO_OAUTH_CLIENT_SECRET="your_actual_client_secret"
+./gradlew build
 ```
 
-### Step 3: Build and Test
+**On Windows (PowerShell):**
+```powershell
+$env:ZOTERO_OAUTH_CLIENT_KEY="your_actual_client_key"
+$env:ZOTERO_OAUTH_CLIENT_SECRET="your_actual_client_secret"
+gradlew.bat build
+```
+
+**Or create a local.properties file (not committed to git):**
+```properties
+# Add to .gitignore
+ZOTERO_OAUTH_CLIENT_KEY=your_actual_client_key
+ZOTERO_OAUTH_CLIENT_SECRET=your_actual_client_secret
+```
+
+Then modify `app/build.gradle` to read from local.properties if environment variables aren't set.
+
+### Step 3: How It Works
+
+The OAuth credentials are now configured in `app/build.gradle`:
+
+```gradle
+buildConfigField "String", "ZOTERO_OAUTH_CLIENT_KEY",
+    "\"${System.getenv('ZOTERO_OAUTH_CLIENT_KEY') ?: 'YOUR_CLIENT_KEY_HERE'}\""
+buildConfigField "String", "ZOTERO_OAUTH_CLIENT_SECRET",
+    "\"${System.getenv('ZOTERO_OAUTH_CLIENT_SECRET') ?: 'YOUR_CLIENT_SECRET_HERE'}\""
+```
+
+This generates a `BuildConfig.java` file with your credentials, which `ZoteroOAuthConfig.java` references:
+
+```java
+public static final String CLIENT_KEY = BuildConfig.ZOTERO_OAUTH_CLIENT_KEY;
+public static final String CLIENT_SECRET = BuildConfig.ZOTERO_OAUTH_CLIENT_SECRET;
+```
+
+**Benefits:**
+- ✅ Credentials never appear in source code
+- ✅ Safe for public GitHub repositories
+- ✅ Works seamlessly with CI/CD systems like Bitrise
+- ✅ Different credentials can be used for different build environments
+
+### Step 4: Build and Test
 
 1. Build the app: `./gradlew build`
 2. Install on device/emulator: `./gradlew installDebug`
@@ -91,9 +149,11 @@ ZotShelf implements the standard OAuth 1.0a three-legged authentication flow:
 
 ### OAuth Credentials
 
-- **Never commit** `CLIENT_KEY` and `CLIENT_SECRET` to public repositories
-- Consider using environment variables or a secure config file
-- For open-source projects, provide a template config file with placeholders
+- ✅ **Credentials are now stored as environment variables**, not in source code
+- ✅ **Safe for public repositories** - no secrets are committed to git
+- ✅ **Bitrise secrets are encrypted** and never exposed in logs
+- ⚠️ **Never hardcode** `CLIENT_KEY` and `CLIENT_SECRET` in source files
+- ⚠️ **Never commit** `local.properties` if using it for local development (add to .gitignore)
 
 ### API Key Storage
 
@@ -117,7 +177,33 @@ ZotShelf implements the standard OAuth 1.0a three-legged authentication flow:
 
 **Problem**: The app shows "OAuth not configured" when clicking "Login with Zotero"
 
-**Solution**: Make sure you've updated `ZoteroOAuthConfig.java` with your actual client credentials
+**Solutions**:
+- **On Bitrise**: Verify that both secrets (`ZOTERO_OAUTH_CLIENT_KEY` and `ZOTERO_OAUTH_CLIENT_SECRET`) are configured in Workflow → Secrets
+- **Local Development**: Check that environment variables are set before building
+- Verify the secret names match exactly (including case)
+- Check the build logs to see what values BuildConfig is using
+
+### Environment Variables Not Being Read (Bitrise)
+
+**Problem**: Build succeeds but OAuth still shows placeholder values
+
+**Solutions**:
+- Make sure the secret **keys** in Bitrise are exactly:
+  - `ZOTERO_OAUTH_CLIENT_KEY` (not CLIENT-KEY or client_key)
+  - `ZOTERO_OAUTH_CLIENT_SECRET`
+- Ensure "Expose for Pull Requests" is checked if building a PR
+- Check the Bitrise build logs under the Gradle build step to verify environment variables are present
+- Try rebuilding from scratch (clean build)
+
+### BuildConfig Not Generated
+
+**Problem**: Build fails with "cannot find symbol: variable BuildConfig"
+
+**Solutions**:
+- Make sure `buildFeatures { buildConfig = true }` is in `app/build.gradle`
+- Clean and rebuild: `./gradlew clean build`
+- Sync project with Gradle files in Android Studio
+- Check that you're using a compatible Android Gradle Plugin version
 
 ### "Failed to start OAuth" Error
 
