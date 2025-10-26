@@ -10,6 +10,9 @@ import android.app.AlertDialog;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.graphics.Insets;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -46,6 +49,22 @@ public class MainActivity extends AppCompatActivity {
         tabLayout = findViewById(R.id.tabLayout);
         viewPager = findViewById(R.id.viewPager);
         fabAddTab = findViewById(R.id.fabAddTab);
+
+        // Handle window insets to prevent tab headers from overlapping with status bar
+        View rootView = findViewById(android.R.id.content);
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // Apply top inset to tab layout to prevent overlap with status bar
+            tabLayout.setPadding(
+                tabLayout.getPaddingLeft(),
+                insets.top,
+                tabLayout.getPaddingRight(),
+                tabLayout.getPaddingBottom()
+            );
+
+            return windowInsets;
+        });
 
         // Setup tabs regardless of credentials (fragments will handle empty state)
         setupTabs();
