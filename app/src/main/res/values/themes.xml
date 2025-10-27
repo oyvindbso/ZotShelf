@@ -15,6 +15,12 @@
         <!-- Customize your theme here. -->
     </style>
 
+    <!-- Theme variant without action bar for custom toolbar activities -->
+    <style name="Theme.ZotShelf.NoActionBar" parent="Theme.ZotShelf">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
     <!-- Tab text style without all caps -->
     <style name="TabTextStyle" parent="TextAppearance.Design.Tab">
         <item name="textAllCaps">false</item>

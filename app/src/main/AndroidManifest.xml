@@ -46,6 +46,7 @@
             android:label="Login to Zotero"
             android:parentActivityName=".SettingsActivity"
             android:launchMode="singleTask"
+            android:theme="@style/Theme.ZotShelf.NoActionBar"
             android:exported="true">
             <!-- Intent filter to handle OAuth callback -->
             <intent-filter>
