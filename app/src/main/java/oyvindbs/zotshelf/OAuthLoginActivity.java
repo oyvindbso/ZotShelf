@@ -62,32 +62,70 @@ public class OAuthLoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_oauth_login);
 
-        // Setup toolbar
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowTitleEnabled(false);
+        try {
+            setContentView(R.layout.activity_oauth_login);
+
+            // Initialize UI components
+            webView = findViewById(R.id.webView);
+            progressBar = findViewById(R.id.progressBar);
+            statusText = findViewById(R.id.statusText);
+
+            // Setup toolbar
+            MaterialToolbar toolbar = findViewById(R.id.toolbar);
+            if (toolbar != null) {
+                setSupportActionBar(toolbar);
+                if (getSupportActionBar() != null) {
+                    getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+                    getSupportActionBar().setDisplayShowTitleEnabled(false);
+                }
+            }
+
+            executorService = Executors.newSingleThreadExecutor();
+            mainHandler = new Handler(Looper.getMainLooper());
+
+            // Log BuildConfig values for debugging
+            Log.d(TAG, "BuildConfig.ZOTERO_OAUTH_CLIENT_KEY exists: " + (BuildConfig.ZOTERO_OAUTH_CLIENT_KEY != null));
+            Log.d(TAG, "BuildConfig.ZOTERO_OAUTH_CLIENT_SECRET exists: " + (BuildConfig.ZOTERO_OAUTH_CLIENT_SECRET != null));
+
+            // Check if OAuth is configured
+            if (!ZoteroOAuthConfig.isConfigured()) {
+                String clientKey = BuildConfig.ZOTERO_OAUTH_CLIENT_KEY;
+                String errorMsg = "OAuth not configured.\n\n";
+                errorMsg += "Client Key: " + (clientKey != null ? clientKey.substring(0, Math.min(10, clientKey.length())) + "..." : "NULL") + "\n\n";
+                errorMsg += "Please configure OAuth credentials in Bitrise secrets:\n";
+                errorMsg += "- ZOTERO_OAUTH_CLIENT_KEY\n";
+                errorMsg += "- ZOTERO_OAUTH_CLIENT_SECRET\n\n";
+                errorMsg += "See BITRISE_SETUP.md for instructions.";
+                showError(errorMsg);
+                return;
+            }
+
+            Log.d(TAG, "OAuth is configured, starting login flow");
+            setupWebView();
+            startOAuthFlow();
+
+        } catch (Exception e) {
+            Log.e(TAG, "CRASH in onCreate: " + e.getMessage(), e);
+            e.printStackTrace();
+
+            // Show error to user
+            String errorMsg = "Failed to initialize OAuth login:\n\n" + e.getClass().getSimpleName() + ": " + e.getMessage();
+
+            if (e.getMessage() != null && e.getMessage().contains("BuildConfig")) {
+                errorMsg += "\n\nThis appears to be a BuildConfig issue. Make sure the app was built correctly with Gradle.";
+            }
+
+            Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+
+            // Try to show in UI if available
+            if (statusText != null) {
+                statusText.setText("Error: " + e.getMessage());
+            }
+            if (progressBar != null) {
+                progressBar.setVisibility(View.GONE);
+            }
         }
-
-        webView = findViewById(R.id.webView);
-        progressBar = findViewById(R.id.progressBar);
-        statusText = findViewById(R.id.statusText);
-
-        executorService = Executors.newSingleThreadExecutor();
-        mainHandler = new Handler(Looper.getMainLooper());
-
-        // Check if OAuth is configured
-        if (!ZoteroOAuthConfig.isConfigured()) {
-            showError("OAuth not configured. Please configure OAuth credentials in Bitrise secrets or environment variables. See BITRISE_SETUP.md for instructions.");
-            return;
-        }
-
-        Log.d(TAG, "OAuth is configured, starting login flow");
-        setupWebView();
-        startOAuthFlow();
     }
 
     @Override
