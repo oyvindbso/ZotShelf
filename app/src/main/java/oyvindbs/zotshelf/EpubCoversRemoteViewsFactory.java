@@ -76,7 +76,8 @@ public void onDataSetChanged() {
                                         item.getTitle(),
                                         coverPath,
                                         item.getAuthors(),
-                                        userPreferences.getZoteroUsername()
+                                        userPreferences.getZoteroUsername(),
+                                        item.getYear()
                                 );
                                 
                                 coverItems.add(coverItem);
@@ -91,7 +92,8 @@ public void onDataSetChanged() {
                                         item.getTitle(),
                                         null, // null cover path will show placeholder
                                         item.getAuthors(),
-                                        userPreferences.getZoteroUsername()
+                                        userPreferences.getZoteroUsername(),
+                                        item.getYear()
                                 );
                                 
                                 coverItems.add(coverItem);
@@ -108,7 +110,8 @@ public void onDataSetChanged() {
                                 item.getTitle(),
                                 null, // null cover path will show placeholder
                                 item.getAuthors(),
-                                userPreferences.getZoteroUsername()
+                                userPreferences.getZoteroUsername(),
+                                item.getYear()
                         );
                         
                         coverItems.add(coverItem);

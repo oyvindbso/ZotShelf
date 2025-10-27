@@ -21,21 +21,24 @@ public class ZoteroItem {
     public static class ZoteroItemData {
         @SerializedName("title")
         private String title;
-        
+
         @SerializedName("creators")
         private ZoteroCreator[] creators;
-        
+
         @SerializedName("contentType")
         private String contentType;
-        
+
         @SerializedName("filename")
         private String filename;
-        
+
         @SerializedName("parentItem")
         private String parentItemKey;
-        
+
         @SerializedName("itemType")
         private String itemType;
+
+        @SerializedName("date")
+        private String date;
     }
     
     // Nested class to represent creator data
@@ -235,16 +238,58 @@ public class ZoteroItem {
     public ZoteroLinks getLinks() {
         return links;
     }
-    
+
+    /**
+     * Get the publication year from the date field
+     * @return The year as a string, or null if not available
+     */
+    public String getYear() {
+        // First try to get year from parent item
+        if (parentItem != null && parentItem.data != null &&
+            parentItem.data.date != null && !parentItem.data.date.isEmpty()) {
+            return extractYear(parentItem.data.date);
+        }
+
+        // Fall back to attachment date
+        if (data != null && data.date != null && !data.date.isEmpty()) {
+            return extractYear(data.date);
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract a 4-digit year from a date string
+     * Handles various date formats like "2023", "2023-01-15", "January 2023", etc.
+     * @param date The date string
+     * @return The year as a string, or null if not found
+     */
+    private String extractYear(String date) {
+        if (date == null || date.isEmpty()) {
+            return null;
+        }
+
+        // Look for a 4-digit year (1000-2999)
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("[12]\\d{3}");
+        java.util.regex.Matcher matcher = pattern.matcher(date);
+
+        if (matcher.find()) {
+            return matcher.group();
+        }
+
+        return null;
+    }
+
     // For debugging
     @Override
     public String toString() {
-        return "ZoteroItem{key=" + key + 
-               ", title=" + getTitle() + 
-               ", authors=" + getAuthors() + 
-               ", parentItemKey=" + getParentItemKey() + 
+        return "ZoteroItem{key=" + key +
+               ", title=" + getTitle() +
+               ", authors=" + getAuthors() +
+               ", parentItemKey=" + getParentItemKey() +
                ", parentItemType=" + getParentItemType() +
                ", isBook=" + isBook() +
+               ", year=" + getYear() +
                "}";
     }
 }

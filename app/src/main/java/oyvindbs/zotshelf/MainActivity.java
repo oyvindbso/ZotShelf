@@ -513,20 +513,88 @@ public class MainActivity extends AppCompatActivity {
 
     private void showSortDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Sort By");
+        builder.setTitle("Sort Options");
 
-        String[] options = {"Title", "Author"};
+        // Create a custom view with sort type and sort order options
+        android.view.View dialogView = getLayoutInflater().inflate(android.R.layout.select_dialog_multichoice, null);
+        android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
+        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        layout.setPadding(50, 40, 50, 40);
+
+        // Sort type section
+        android.widget.TextView sortByLabel = new android.widget.TextView(this);
+        sortByLabel.setText("Sort by:");
+        sortByLabel.setTextSize(16);
+        sortByLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        sortByLabel.setPadding(0, 0, 0, 20);
+        layout.addView(sortByLabel);
+
+        android.widget.RadioGroup sortTypeGroup = new android.widget.RadioGroup(this);
+        sortTypeGroup.setPadding(20, 0, 0, 30);
+
+        android.widget.RadioButton titleRadio = new android.widget.RadioButton(this);
+        titleRadio.setText("Title");
+        titleRadio.setId(UserPreferences.SORT_BY_TITLE);
+        sortTypeGroup.addView(titleRadio);
+
+        android.widget.RadioButton authorRadio = new android.widget.RadioButton(this);
+        authorRadio.setText("Author");
+        authorRadio.setId(UserPreferences.SORT_BY_AUTHOR);
+        sortTypeGroup.addView(authorRadio);
+
+        android.widget.RadioButton yearRadio = new android.widget.RadioButton(this);
+        yearRadio.setText("Year");
+        yearRadio.setId(UserPreferences.SORT_BY_YEAR);
+        sortTypeGroup.addView(yearRadio);
+
         int currentMode = userPreferences.getSortMode();
+        sortTypeGroup.check(currentMode);
 
-        builder.setSingleChoiceItems(options, currentMode, (dialog, which) -> {
-            userPreferences.setSortMode(which);
-            dialog.dismiss();
+        layout.addView(sortTypeGroup);
 
-            // Apply sorting to current tab
+        // Sort order section
+        android.widget.TextView sortOrderLabel = new android.widget.TextView(this);
+        sortOrderLabel.setText("Sort order:");
+        sortOrderLabel.setTextSize(16);
+        sortOrderLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        sortOrderLabel.setPadding(0, 20, 0, 20);
+        layout.addView(sortOrderLabel);
+
+        android.widget.RadioGroup sortOrderGroup = new android.widget.RadioGroup(this);
+        sortOrderGroup.setPadding(20, 0, 0, 0);
+
+        android.widget.RadioButton ascendingRadio = new android.widget.RadioButton(this);
+        ascendingRadio.setText("Ascending (A-Z, 0-9)");
+        ascendingRadio.setId(0);
+        sortOrderGroup.addView(ascendingRadio);
+
+        android.widget.RadioButton descendingRadio = new android.widget.RadioButton(this);
+        descendingRadio.setText("Descending (Z-A, 9-0)");
+        descendingRadio.setId(1);
+        sortOrderGroup.addView(descendingRadio);
+
+        boolean currentDescending = userPreferences.getSortDescending();
+        sortOrderGroup.check(currentDescending ? 1 : 0);
+
+        layout.addView(sortOrderGroup);
+
+        builder.setView(layout);
+
+        builder.setPositiveButton("Apply", (dialog, which) -> {
+            int selectedMode = sortTypeGroup.getCheckedRadioButtonId();
+            boolean selectedDescending = sortOrderGroup.getCheckedRadioButtonId() == 1;
+
+            userPreferences.setSortMode(selectedMode);
+            userPreferences.setSortDescending(selectedDescending);
+
             applySortingToCurrentTab();
 
+            String sortTypeName = selectedMode == UserPreferences.SORT_BY_TITLE ? "Title" :
+                                  selectedMode == UserPreferences.SORT_BY_AUTHOR ? "Author" : "Year";
+            String orderName = selectedDescending ? "descending" : "ascending";
+
             Toast.makeText(this,
-                    "Sorted by " + (which == UserPreferences.SORT_BY_TITLE ? "Title" : "Author"),
+                    "Sorted by " + sortTypeName + " (" + orderName + ")",
                     Toast.LENGTH_SHORT).show();
         });
 

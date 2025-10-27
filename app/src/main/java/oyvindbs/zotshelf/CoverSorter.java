@@ -7,25 +7,44 @@ import java.util.List;
 public class CoverSorter {
     
     /**
-     * Sort a list of EpubCoverItems based on the specified sort mode
+     * Sort a list of EpubCoverItems based on the specified sort mode and order
      * @param items The list of items to sort (sorted in place)
-     * @param sortMode The sort mode (UserPreferences.SORT_BY_TITLE or SORT_BY_AUTHOR)
+     * @param sortMode The sort mode (SORT_BY_TITLE, SORT_BY_AUTHOR, or SORT_BY_YEAR)
+     * @param descending Whether to sort in descending order (false = ascending)
      */
-    public static void sortCovers(List<EpubCoverItem> items, int sortMode) {
+    public static void sortCovers(List<EpubCoverItem> items, int sortMode, boolean descending) {
         if (items == null || items.isEmpty()) {
             return;
         }
-        
+
         Comparator<EpubCoverItem> comparator;
-        
+
         if (sortMode == UserPreferences.SORT_BY_AUTHOR) {
             comparator = new AuthorComparator();
+        } else if (sortMode == UserPreferences.SORT_BY_YEAR) {
+            comparator = new YearComparator();
         } else {
             // Default to title sorting
             comparator = new TitleComparator();
         }
-        
+
+        // Reverse the comparator if descending order is requested
+        if (descending) {
+            comparator = Collections.reverseOrder(comparator);
+        }
+
         Collections.sort(items, comparator);
+    }
+
+    /**
+     * Sort a list of EpubCoverItems based on the specified sort mode (ascending order)
+     * @param items The list of items to sort (sorted in place)
+     * @param sortMode The sort mode (SORT_BY_TITLE, SORT_BY_AUTHOR, or SORT_BY_YEAR)
+     * @deprecated Use sortCovers(items, sortMode, descending) instead
+     */
+    @Deprecated
+    public static void sortCovers(List<EpubCoverItem> items, int sortMode) {
+        sortCovers(items, sortMode, false);
     }
     
     /**
@@ -58,34 +77,77 @@ public class CoverSorter {
         public int compare(EpubCoverItem item1, EpubCoverItem item2) {
             String authors1 = item1.getAuthors();
             String authors2 = item2.getAuthors();
-            
+
             // Handle null authors
             if (authors1 == null && authors2 == null) return 0;
             if (authors1 == null) return 1;  // null authors go to end
             if (authors2 == null) return -1;
-            
+
             // Extract first author's last name for sorting
             String lastName1 = extractFirstAuthorLastName(authors1);
             String lastName2 = extractFirstAuthorLastName(authors2);
-            
+
             int result = lastName1.compareToIgnoreCase(lastName2);
-            
+
             // If last names are the same, sort by title as secondary criteria
             if (result == 0) {
                 String title1 = item1.getTitle();
                 String title2 = item2.getTitle();
-                
+
                 if (title1 == null && title2 == null) return 0;
                 if (title1 == null) return 1;
                 if (title2 == null) return -1;
-                
+
                 title1 = removeArticles(title1);
                 title2 = removeArticles(title2);
-                
+
                 result = title1.compareToIgnoreCase(title2);
             }
-            
+
             return result;
+        }
+    }
+
+    /**
+     * Comparator for sorting by publication year
+     */
+    private static class YearComparator implements Comparator<EpubCoverItem> {
+        @Override
+        public int compare(EpubCoverItem item1, EpubCoverItem item2) {
+            String year1 = item1.getYear();
+            String year2 = item2.getYear();
+
+            // Handle null years - put them at the end
+            if (year1 == null && year2 == null) return 0;
+            if (year1 == null) return 1;  // null years go to end
+            if (year2 == null) return -1;
+
+            // Try to parse as integers for proper numeric sorting
+            try {
+                int y1 = Integer.parseInt(year1);
+                int y2 = Integer.parseInt(year2);
+                int result = Integer.compare(y1, y2);
+
+                // If years are the same, sort by title as secondary criteria
+                if (result == 0) {
+                    String title1 = item1.getTitle();
+                    String title2 = item2.getTitle();
+
+                    if (title1 == null && title2 == null) return 0;
+                    if (title1 == null) return 1;
+                    if (title2 == null) return -1;
+
+                    title1 = removeArticles(title1);
+                    title2 = removeArticles(title2);
+
+                    result = title1.compareToIgnoreCase(title2);
+                }
+
+                return result;
+            } catch (NumberFormatException e) {
+                // If parsing fails, do string comparison
+                return year1.compareTo(year2);
+            }
         }
     }
     

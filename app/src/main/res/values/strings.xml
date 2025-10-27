@@ -36,7 +36,12 @@
     <string name="sort_mode_title">Sort Mode</string>
     <string name="sort_by_title">Sort by Title</string>
     <string name="sort_by_author">Sort by Author</string>
+    <string name="sort_by_year">Sort by Year</string>
     <string name="change_sort_mode">Change Sort Mode</string>
+    <string name="sort_ascending">Ascending (A-Z, 0-9)</string>
+    <string name="sort_descending">Descending (Z-A, 9-0)</string>
+    <string name="sort_options">Sort Options</string>
+    <string name="sort_order">Sort order:</string>
     
     <!-- File type settings -->
     <string name="file_type_settings">File Type Settings</string>

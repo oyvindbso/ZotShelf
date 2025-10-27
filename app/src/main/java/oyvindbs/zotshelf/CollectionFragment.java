@@ -420,7 +420,8 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                                     item.getTitle(),
                                     coverPath,
                                     item.getAuthors(),
-                                    userPreferences.getZoteroUsername()
+                                    userPreferences.getZoteroUsername(),
+                                    item.getYear()
                             );
 
                             synchronized (newCoverItems) {
@@ -446,7 +447,8 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                                     item.getTitle(),
                                     null,
                                     item.getAuthors(),
-                                    userPreferences.getZoteroUsername()
+                                    userPreferences.getZoteroUsername(),
+                                    item.getYear()
                             );
 
                             synchronized (newCoverItems) {
@@ -474,7 +476,8 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                             item.getTitle() + " (Download failed)",
                             null,
                             item.getAuthors(),
-                            userPreferences.getZoteroUsername()
+                            userPreferences.getZoteroUsername(),
+                            item.getYear()
                     );
 
                     synchronized (newCoverItems) {
@@ -503,9 +506,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
             coverItems.clear();
             coverItems.addAll(newItems);
 
-            // Apply current sort mode
+            // Apply current sort mode and order
             int sortMode = userPreferences.getSortMode();
-            CoverSorter.sortCovers(coverItems, sortMode);
+            boolean descending = userPreferences.getSortDescending();
+            CoverSorter.sortCovers(coverItems, sortMode, descending);
 
             int displayMode = userPreferences.getDisplayMode();
             adapter = new CoverGridAdapter(requireContext(), coverItems, this, displayMode);
@@ -581,9 +585,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
         getActivity().runOnUiThread(() -> {
             if (!coverItems.isEmpty()) {
-                // Apply current sort mode
+                // Apply current sort mode and order
                 int sortMode = userPreferences.getSortMode();
-                CoverSorter.sortCovers(coverItems, sortMode);
+                boolean descending = userPreferences.getSortDescending();
+                CoverSorter.sortCovers(coverItems, sortMode, descending);
 
                 // Refresh the adapter
                 if (adapter != null) {

@@ -87,23 +87,24 @@ public class EpubCoverRepository {
                 coverPath,
                 userPreferences.getZoteroUsername()
         );
-        
+
         entity.setFileName(item.getFilename());
         entity.setMimeType(item.getMimeType());
         entity.setParentItemType(item.getParentItemType());
         entity.setBook(item.isBook());
-        
+        entity.setYear(item.getYear());
+
         String currentCollection = userPreferences.getSelectedCollectionKey();
         if (currentCollection != null && !currentCollection.isEmpty()) {
             entity.setCollectionKeys(currentCollection);
         } else {
             entity.setCollectionKeys("");
         }
-        
+
         if (item.getLinks() != null && item.getLinks().getEnclosure() != null) {
             entity.setDownloadUrl(item.getLinks().getEnclosure().getHref());
         }
-        
+
         return entity;
     }
 
@@ -182,7 +183,8 @@ public class EpubCoverRepository {
                     entity.getTitle(),
                     coverPath,
                     entity.getAuthors(),
-                    entity.getZoteroUsername()
+                    entity.getZoteroUsername(),
+                    entity.getYear()
             );
             coverItems.add(item);
         }
@@ -200,6 +202,7 @@ public class EpubCoverRepository {
                         item.getCoverPath(),
                         item.getZoteroUsername()
                 );
+                entity.setYear(item.getYear());
                 entities.add(entity);
             }
             database.epubCoverDao().insertAll(entities);
