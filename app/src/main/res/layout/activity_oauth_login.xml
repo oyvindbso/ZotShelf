@@ -3,16 +3,17 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?attr/colorSurface">
+    android:background="#FAFAFA">
 
     <!-- Header with status -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorPrimary"
+        android:background="#1976D2"
         android:elevation="4dp"
-        android:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar">
+        android:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar"
+        style="@style/Widget.MaterialComponents.Toolbar.Primary">
 
         <TextView
             android:layout_width="wrap_content"
@@ -29,7 +30,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp"
-        android:background="?attr/colorSurfaceVariant">
+        android:background="@android:color/white">
 
         <TextView
             android:id="@+id/statusText"
@@ -37,7 +38,7 @@
             android:layout_height="wrap_content"
             android:text="Initializing..."
             android:textSize="14sp"
-            android:textColor="?attr/colorOnSurface"
+            android:textColor="@android:color/black"
             android:gravity="center" />
 
         <ProgressBar
