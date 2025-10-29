@@ -46,8 +46,7 @@ public class CredentialVerificationActivity extends AppCompatActivity {
         StringBuilder sb = new StringBuilder("Current Credentials:\n\n");
         sb.append("Username: ").append(username).append("\n");
         sb.append("User ID: ").append(userId).append("\n");
-        sb.append("API Key: ").append(apiKey != null && apiKey.length() > 5 ? 
-                apiKey.substring(0, 5) + "..." : apiKey).append("\n\n");
+        sb.append("API Key: ").append(apiKey != null && !apiKey.isEmpty() ? "••••••••••••••••" : "Not set").append("\n\n");
         sb.append("Click 'Verify' to test these credentials with the Zotero API.");
 
         statusTextView.setText(sb.toString());

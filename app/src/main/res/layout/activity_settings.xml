@@ -152,13 +152,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:hint="Zotero API Key">
+                android:hint="Zotero API Key"
+                app:endIconMode="password_toggle">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editZoteroApiKey"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
+                    android:inputType="textPassword"
                     android:maxLines="1" />
 
             </com.google.android.material.textfield.TextInputLayout>

@@ -34,6 +34,7 @@ public class SettingsActivity extends AppCompatActivity {
     private UserPreferences userPreferences;
 
     private static final int OAUTH_LOGIN_REQUEST = 1001;
+    private static final String API_KEY_PLACEHOLDER = "••••••••••••••••";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,13 +101,22 @@ public class SettingsActivity extends AppCompatActivity {
         // Load Zotero credentials
         editZoteroUsername.setText(userPreferences.getZoteroUsername());
         editZoteroUserId.setText(userPreferences.getZoteroUserId());
-        editZoteroApiKey.setText(userPreferences.getZoteroApiKey());
-        
+
+        // Show placeholder for API key if it exists, never show the actual key
+        String existingApiKey = userPreferences.getZoteroApiKey();
+        if (existingApiKey != null && !existingApiKey.isEmpty()) {
+            editZoteroApiKey.setHint("API Key configured (enter new key to update)");
+            editZoteroApiKey.setText("");
+        } else {
+            editZoteroApiKey.setHint("Zotero API Key");
+            editZoteroApiKey.setText("");
+        }
+
         // Load file type preferences
         checkBoxShowEpubs.setChecked(userPreferences.getShowEpubs());
         checkBoxShowPdfs.setChecked(userPreferences.getShowPdfs());
         checkBoxBooksOnly.setChecked(userPreferences.getBooksOnly());
-        
+
         // Set the display mode radio button
         int displayMode = userPreferences.getDisplayMode();
         switch (displayMode) {
@@ -128,17 +138,27 @@ public class SettingsActivity extends AppCompatActivity {
         String userId = editZoteroUserId.getText().toString().trim();
         String apiKey = editZoteroApiKey.getText().toString().trim();
 
+        // Check if API key field is empty - if so, keep the existing one
+        String existingApiKey = userPreferences.getZoteroApiKey();
+        boolean hasExistingApiKey = existingApiKey != null && !existingApiKey.isEmpty();
+
         // Validate inputs
-        if (username.isEmpty() || userId.isEmpty() || apiKey.isEmpty()) {
+        if (username.isEmpty() || userId.isEmpty()) {
             Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
             return;
         }
-        
+
+        // If API key field is empty and there's no existing key, show error
+        if (apiKey.isEmpty() && !hasExistingApiKey) {
+            Toast.makeText(this, "Please enter an API key", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         // Validate file type selection
         boolean showEpubs = checkBoxShowEpubs.isChecked();
         boolean showPdfs = checkBoxShowPdfs.isChecked();
         boolean booksOnly = checkBoxBooksOnly.isChecked();
-        
+
         if (!showEpubs && !showPdfs) {
             Toast.makeText(this, "Please select at least one file type to display", Toast.LENGTH_SHORT).show();
             return;
@@ -147,13 +167,17 @@ public class SettingsActivity extends AppCompatActivity {
         // Save Zotero credentials
         userPreferences.setZoteroUsername(username);
         userPreferences.setZoteroUserId(userId);
-        userPreferences.setZoteroApiKey(apiKey);
-        
+
+        // Only update API key if a new one was entered
+        if (!apiKey.isEmpty()) {
+            userPreferences.setZoteroApiKey(apiKey);
+        }
+
         // Save file type preferences
         userPreferences.setShowEpubs(showEpubs);
         userPreferences.setShowPdfs(showPdfs);
         userPreferences.setBooksOnly(booksOnly);
-        
+
         // Save display mode
         int displayMode;
         int selectedRadioButtonId = radioGroupDisplayMode.getCheckedRadioButtonId();

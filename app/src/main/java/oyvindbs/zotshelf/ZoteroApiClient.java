@@ -49,7 +49,8 @@ public class ZoteroApiClient {
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor(message -> {
             Log.d(TAG, message);
         });
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        // Use BASIC level to avoid logging sensitive headers (API keys)
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BASIC);
         
         OkHttpClient client = new OkHttpClient.Builder()
                 .addInterceptor(loggingInterceptor)
@@ -209,21 +210,20 @@ public class ZoteroApiClient {
 
     public void getCollections(String userId, String apiKey, ZoteroCallback<List<ZoteroCollection>> callback) {
         executor.execute(() -> {
-            Log.d(TAG, "Getting collections - UserId: '" + userId + "', API Key: '" + 
-                  (apiKey != null ? apiKey.substring(0, 5) + "..." : "null") + "'");
-            
+            Log.d(TAG, "Getting collections - UserId: '" + userId + "'");
+
             if (userId == null || userId.isEmpty()) {
                 Log.e(TAG, "User ID is empty or null!");
                 callback.onError("User ID is empty");
                 return;
             }
-            
+
             if (apiKey == null || apiKey.isEmpty()) {
                 Log.e(TAG, "API Key is empty or null!");
                 callback.onError("API Key is empty");
                 return;
             }
-            
+
             Call<List<ZoteroCollection>> call = zoteroService.getCollections(userId, apiKey);
             Log.d(TAG, "API Request URL: " + call.request().url());
 
