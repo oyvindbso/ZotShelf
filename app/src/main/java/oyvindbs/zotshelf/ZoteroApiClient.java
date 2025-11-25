@@ -209,8 +209,7 @@ public class ZoteroApiClient {
 
     public void getCollections(String userId, String apiKey, ZoteroCallback<List<ZoteroCollection>> callback) {
         executor.execute(() -> {
-            Log.d(TAG, "Getting collections - UserId: '" + userId + "', API Key: '" + 
-                  (apiKey != null ? apiKey.substring(0, 5) + "..." : "null") + "'");
+            Log.d(TAG, "Getting collections - UserId: '" + userId + "', API Key: ***MASKED***");
             
             if (userId == null || userId.isEmpty()) {
                 Log.e(TAG, "User ID is empty or null!");
@@ -386,7 +385,13 @@ public class ZoteroApiClient {
                 callback.onFileDownloaded(item, epubFile.getAbsolutePath());
                 return;
             }
-            
+
+            if (item.getLinks() == null || item.getLinks().getEnclosure() == null ||
+                item.getLinks().getEnclosure().getHref() == null) {
+                callback.onError(item, "Download URL not available");
+                return;
+            }
+
             String downloadUrl = item.getLinks().getEnclosure().getHref();
             String apiKey = new UserPreferences(context).getZoteroApiKey();
             
@@ -413,26 +418,18 @@ public class ZoteroApiClient {
     }
 
     private boolean writeResponseBodyToDisk(ResponseBody body, File outputFile) {
-        try {
-            InputStream inputStream = body.byteStream();
-            OutputStream outputStream = new FileOutputStream(outputFile);
-            
+        try (InputStream inputStream = body.byteStream();
+             OutputStream outputStream = new FileOutputStream(outputFile)) {
+
             byte[] fileReader = new byte[4096];
-            
-            while (true) {
-                int read = inputStream.read(fileReader);
-                
-                if (read == -1) {
-                    break;
-                }
-                
+            int read;
+
+            while ((read = inputStream.read(fileReader)) != -1) {
                 outputStream.write(fileReader, 0, read);
             }
-            
+
             outputStream.flush();
-            outputStream.close();
-            inputStream.close();
-            
+
             return true;
         } catch (IOException e) {
             Log.e(TAG, "File write error", e);
@@ -633,11 +630,12 @@ public class ZoteroApiClient {
                 return;
             }
             
-            if (item.getLinks() == null || item.getLinks().getEnclosure() == null) {
+            if (item.getLinks() == null || item.getLinks().getEnclosure() == null ||
+                item.getLinks().getEnclosure().getHref() == null) {
                 callback.onError(item, "No download link available");
                 return;
             }
-            
+
             String downloadUrl = item.getLinks().getEnclosure().getHref();
             String apiKey = new UserPreferences(context).getZoteroApiKey();
             

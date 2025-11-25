@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext traffic for all domains -->
-    <base-config cleartextTrafficPermitted="true">
+    <!-- Default: HTTPS only for all domains -->
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <!-- Trust system certificates -->
             <certificates src="system" />
