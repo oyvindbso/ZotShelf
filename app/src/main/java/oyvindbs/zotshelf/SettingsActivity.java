@@ -29,6 +29,9 @@ public class SettingsActivity extends AppCompatActivity {
     private RadioButton radioTitleOnly;
     private RadioButton radioAuthorOnly;
     private RadioButton radioAuthorTitle;
+    private RadioGroup radioGroupLinkType;
+    private RadioButton radioLinkWeb;
+    private RadioButton radioLinkInternal;
     private Button buttonSave;
     private Button buttonOAuthLogin;
     private UserPreferences userPreferences;
@@ -58,6 +61,9 @@ public class SettingsActivity extends AppCompatActivity {
         radioTitleOnly = findViewById(R.id.radioTitleOnly);
         radioAuthorOnly = findViewById(R.id.radioAuthorOnly);
         radioAuthorTitle = findViewById(R.id.radioAuthorTitle);
+        radioGroupLinkType = findViewById(R.id.radioGroupLinkType);
+        radioLinkWeb = findViewById(R.id.radioLinkWeb);
+        radioLinkInternal = findViewById(R.id.radioLinkInternal);
         buttonSave = findViewById(R.id.buttonSave);
         buttonOAuthLogin = findViewById(R.id.buttonOAuthLogin);
 
@@ -121,6 +127,14 @@ public class SettingsActivity extends AppCompatActivity {
                 radioTitleOnly.setChecked(true);
                 break;
         }
+
+        // Set the link type radio button
+        int linkType = userPreferences.getLinkType();
+        if (linkType == UserPreferences.LINK_TYPE_INTERNAL) {
+            radioLinkInternal.setChecked(true);
+        } else {
+            radioLinkWeb.setChecked(true);
+        }
     }
 
     private void savePreferences() {
@@ -165,6 +179,16 @@ public class SettingsActivity extends AppCompatActivity {
             displayMode = UserPreferences.DISPLAY_TITLE_ONLY;
         }
         userPreferences.setDisplayMode(displayMode);
+
+        // Save link type
+        int linkType;
+        int selectedLinkTypeId = radioGroupLinkType.getCheckedRadioButtonId();
+        if (selectedLinkTypeId == R.id.radioLinkInternal) {
+            linkType = UserPreferences.LINK_TYPE_INTERNAL;
+        } else {
+            linkType = UserPreferences.LINK_TYPE_WEB;
+        }
+        userPreferences.setLinkType(linkType);
 
         Toast.makeText(this, R.string.settings_saved, Toast.LENGTH_SHORT).show();
         finish();

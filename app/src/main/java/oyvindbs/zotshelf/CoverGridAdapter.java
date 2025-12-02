@@ -1,11 +1,15 @@
 package oyvindbs.zotshelf;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -85,6 +89,11 @@ public class CoverGridAdapter extends RecyclerView.Adapter<CoverGridAdapter.Cove
                 listener.onCoverClick(item);
             }
         });
+
+        // Set copy button click listener
+        holder.copyButton.setOnClickListener(v -> {
+            copyLinkToClipboard(item);
+        });
     }
 
     @Override
@@ -92,14 +101,45 @@ public class CoverGridAdapter extends RecyclerView.Adapter<CoverGridAdapter.Cove
         return coverItems.size();
     }
 
+    private void copyLinkToClipboard(EpubCoverItem item) {
+        UserPreferences userPreferences = new UserPreferences(context);
+        int linkType = userPreferences.getLinkType();
+        String link;
+        String linkLabel;
+
+        if (linkType == UserPreferences.LINK_TYPE_INTERNAL) {
+            // Internal Zotero link: zotero://select/library/items/{itemId}
+            link = "zotero://select/library/items/" + item.getId();
+            linkLabel = "Internal link";
+        } else {
+            // Web library link: https://www.zotero.org/{username}/items/{itemId}
+            String username = item.getZoteroUsername();
+            if (username == null || username.isEmpty()) {
+                username = userPreferences.getZoteroUsername();
+            }
+            link = "https://www.zotero.org/" + username + "/items/" + item.getId();
+            linkLabel = "Web link";
+        }
+
+        // Copy to clipboard
+        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText(linkLabel, link);
+        clipboard.setPrimaryClip(clip);
+
+        // Show toast notification
+        Toast.makeText(context, linkLabel + " copied to clipboard", Toast.LENGTH_SHORT).show();
+    }
+
     static class CoverViewHolder extends RecyclerView.ViewHolder {
         ImageView coverImage;
         TextView titleText;
+        ImageButton copyButton;
 
         public CoverViewHolder(@NonNull View itemView) {
             super(itemView);
             coverImage = itemView.findViewById(R.id.imageCover);
             titleText = itemView.findViewById(R.id.textTitle);
+            copyButton = itemView.findViewById(R.id.buttonCopyLink);
         }
     }
 }
