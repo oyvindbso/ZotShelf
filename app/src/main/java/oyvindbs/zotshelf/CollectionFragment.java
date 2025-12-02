@@ -1,5 +1,6 @@
 package oyvindbs.zotshelf;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -146,9 +147,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                 new EpubCoverRepository.CoverRepositoryCallback() {
             @Override
             public void onCoversLoaded(List<EpubCoverItem> cachedCovers) {
-                if (getActivity() == null) return;
+                Activity activity = getActivity();
+                if (activity == null) return;
 
-                getActivity().runOnUiThread(() -> {
+                activity.runOnUiThread(() -> {
                     if (!cachedCovers.isEmpty()) {
                         updateUI(cachedCovers);
 
@@ -176,9 +178,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
             @Override
             public void onError(String message) {
-                if (getActivity() == null) return;
+                Activity activity = getActivity();
+                if (activity == null) return;
 
-                getActivity().runOnUiThread(() -> {
+                activity.runOnUiThread(() -> {
                     Log.e("CollectionFragment", "Error loading cached covers: " + message);
                     if (NetworkUtils.isNetworkAvailable(requireContext())) {
                         loadCoversFromApi();
@@ -245,9 +248,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
             public void onError(String errorMessage) {
                 Log.e("CollectionFragment", "=== API ERROR ===");
                 Log.e("CollectionFragment", "Error: " + errorMessage);
-                if (getActivity() == null) return;
+                Activity activity = getActivity();
+                if (activity == null) return;
 
-                getActivity().runOnUiThread(() -> {
+                activity.runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
                     swipeRefreshLayout.setRefreshing(false);
 
@@ -288,8 +292,9 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                         zoteroItems.size() + " items from API");
                 processZoteroItemsForCache(zoteroItems);
 
-                if (getActivity() == null) return;
-                getActivity().runOnUiThread(() -> {
+                Activity activity = getActivity();
+                if (activity == null) return;
+                activity.runOnUiThread(() -> {
                     swipeRefreshLayout.setRefreshing(false);
                     Toast.makeText(requireContext(), "Library updated from Zotero",
                             Toast.LENGTH_SHORT).show();
@@ -299,9 +304,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
             @Override
             public void onError(String errorMessage) {
                 Log.e("CollectionFragment", "Background update error: " + errorMessage);
-                if (getActivity() == null) return;
+                Activity activity = getActivity();
+                if (activity == null) return;
 
-                getActivity().runOnUiThread(() -> {
+                activity.runOnUiThread(() -> {
                     swipeRefreshLayout.setRefreshing(false);
                 });
             }
@@ -343,9 +349,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                 new EpubCoverRepository.CoverRepositoryCallback() {
             @Override
             public void onCoversLoaded(List<EpubCoverItem> covers) {
-                if (getActivity() == null) return;
+                Activity activity = getActivity();
+                if (activity == null) return;
 
-                getActivity().runOnUiThread(() -> {
+                activity.runOnUiThread(() -> {
                     if (covers.isEmpty()) {
                         showEmptyState("No cached covers found");
                     } else {
@@ -361,9 +368,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
             @Override
             public void onError(String message) {
-                if (getActivity() == null) return;
+                Activity activity = getActivity();
+                if (activity == null) return;
 
-                getActivity().runOnUiThread(() -> {
+                activity.runOnUiThread(() -> {
                     showEmptyState("Error loading cached covers: " + message);
                     swipeRefreshLayout.setRefreshing(false);
                 });
@@ -373,9 +381,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
     private void processZoteroItems(List<ZoteroItem> zoteroItems) {
         if (zoteroItems.isEmpty()) {
-            if (getActivity() == null) return;
+            Activity activity = getActivity();
+            if (activity == null) return;
 
-            getActivity().runOnUiThread(() -> {
+            activity.runOnUiThread(() -> {
                 progressBar.setVisibility(View.GONE);
                 swipeRefreshLayout.setRefreshing(false);
 
@@ -497,9 +506,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
     }
 
     private void updateUI(final List<EpubCoverItem> newItems) {
-        if (getActivity() == null) return;
+        Activity activity = getActivity();
+        if (activity == null) return;
 
-        getActivity().runOnUiThread(() -> {
+        activity.runOnUiThread(() -> {
             coverItems.clear();
             coverItems.addAll(newItems);
 
@@ -577,9 +587,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
     }
 
     public void applySorting() {
-        if (getActivity() == null) return;
+        Activity activity = getActivity();
+        if (activity == null) return;
 
-        getActivity().runOnUiThread(() -> {
+        activity.runOnUiThread(() -> {
             if (!coverItems.isEmpty()) {
                 // Apply current sort mode
                 int sortMode = userPreferences.getSortMode();
@@ -601,9 +612,10 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
      * Show an error dialog
      */
     private void showErrorDialog(String title, String message) {
-        if (getActivity() == null) return;
+        Activity activity = getActivity();
+        if (activity == null) return;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
         builder.setTitle(title);
         builder.setMessage(message);
         builder.setPositiveButton("OK", null);

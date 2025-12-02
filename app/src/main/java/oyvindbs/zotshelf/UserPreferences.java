@@ -16,7 +16,8 @@ public class UserPreferences {
     private static final String KEY_SHOW_PDFS = "show_pdfs";
     private static final String KEY_BOOKS_ONLY = "books_only";
     private static final String KEY_SORT_MODE = "sort_mode";
-    
+    private static final String KEY_LINK_TYPE = "link_type";
+
     // Display mode constants
     public static final int DISPLAY_TITLE_ONLY = 0;
     public static final int DISPLAY_AUTHOR_ONLY = 1;
@@ -25,7 +26,11 @@ public class UserPreferences {
     // Sort mode constants
     public static final int SORT_BY_TITLE = 0;
     public static final int SORT_BY_AUTHOR = 1;
-    
+
+    // Link type constants
+    public static final int LINK_TYPE_WEB = 0;
+    public static final int LINK_TYPE_INTERNAL = 1;
+
     private final SharedPreferences preferences;
     
     public UserPreferences(Context context) {
@@ -128,6 +133,14 @@ public class UserPreferences {
     
     public boolean hasAnyFileTypeEnabled() {
         return getShowEpubs() || getShowPdfs();
+    }
+
+    public int getLinkType() {
+        return preferences.getInt(KEY_LINK_TYPE, LINK_TYPE_WEB); // Default to web link
+    }
+
+    public void setLinkType(int linkType) {
+        preferences.edit().putInt(KEY_LINK_TYPE, linkType).apply();
     }
 
     public void clearAll() {

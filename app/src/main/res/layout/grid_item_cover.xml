@@ -14,13 +14,32 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <ImageView
-            android:id="@+id/imageCover"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="180dp"
-            android:scaleType="centerCrop"
-            android:contentDescription="Book cover"
-            tools:src="@tools:sample/backgrounds/scenic" />
+            android:layout_height="180dp">
+
+            <ImageView
+                android:id="@+id/imageCover"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="Book cover"
+                tools:src="@tools:sample/backgrounds/scenic" />
+
+            <ImageButton
+                android:id="@+id/buttonCopyLink"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="top|end"
+                android:layout_margin="4dp"
+                android:background="@android:color/black"
+                android:backgroundTint="#99000000"
+                android:src="@drawable/ic_copy"
+                android:contentDescription="Copy link"
+                android:padding="6dp"
+                android:scaleType="fitCenter" />
+
+        </FrameLayout>
 
         <TextView
             android:id="@+id/textTitle"

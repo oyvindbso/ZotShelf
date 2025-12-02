@@ -261,6 +261,42 @@
 
             </RadioGroup>
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:text="Link Copy Settings"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Link type to copy when clicking the copy button:"
+                android:textSize="16sp" />
+
+            <RadioGroup
+                android:id="@+id/radioGroupLinkType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp">
+
+                <RadioButton
+                    android:id="@+id/radioLinkWeb"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Web library link (https://www.zotero.org/...)" />
+
+                <RadioButton
+                    android:id="@+id/radioLinkInternal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Internal link (zotero://...)" />
+
+            </RadioGroup>
+
             <Button
                 android:id="@+id/buttonSave"
                 android:layout_width="match_parent"
