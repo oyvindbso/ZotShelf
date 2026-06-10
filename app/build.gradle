@@ -2,6 +2,18 @@ plugins {
     id 'com.android.application'
 }
 
+// OAuth credentials: read from environment variables (CI secrets) first,
+// falling back to local.properties (not committed to git) for IDE builds.
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+
+def oauthSecret = { String name, String placeholder ->
+    System.getenv(name) ?: localProperties.getProperty(name) ?: placeholder
+}
+
 android {
     namespace 'oyvindbs.zotshelf'
 
@@ -14,10 +26,8 @@ android {
         versionCode 161
         versionName "1.61cb"
 
-        // OAuth credentials from environment variables (Bitrise secrets)
-        // Fallback to placeholder values for local development
-        buildConfigField "String", "ZOTERO_OAUTH_CLIENT_KEY", "\"${System.getenv('ZOTERO_OAUTH_CLIENT_KEY') ?: 'YOUR_CLIENT_KEY_HERE'}\""
-        buildConfigField "String", "ZOTERO_OAUTH_CLIENT_SECRET", "\"${System.getenv('ZOTERO_OAUTH_CLIENT_SECRET') ?: 'YOUR_CLIENT_SECRET_HERE'}\""
+        buildConfigField "String", "ZOTERO_OAUTH_CLIENT_KEY", "\"${oauthSecret('ZOTERO_OAUTH_CLIENT_KEY', 'YOUR_CLIENT_KEY_HERE')}\""
+        buildConfigField "String", "ZOTERO_OAUTH_CLIENT_SECRET", "\"${oauthSecret('ZOTERO_OAUTH_CLIENT_SECRET', 'YOUR_CLIENT_SECRET_HERE')}\""
     }
 
     testOptions {
