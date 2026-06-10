@@ -20,7 +20,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import oyvindbs.zotshelf.database.EpubCoverRepository;
@@ -46,10 +45,6 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
     private UserPreferences userPreferences;
     private EpubCoverRepository coverRepository;
     private boolean isOfflineMode = false;
-
-    public static CollectionFragment newInstance(String collectionKey, String collectionName) {
-        return newInstance(collectionKey, collectionName, null);
-    }
 
     public static CollectionFragment newInstance(String collectionKey, String collectionName, String tags) {
         CollectionFragment fragment = new CollectionFragment();
@@ -206,45 +201,17 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         String userId = userPreferences.getZoteroUserId();
         String apiKey = userPreferences.getZoteroApiKey();
 
-        Log.d("CollectionFragment", "=== LOADING COVERS FROM API ===");
-        Log.d("CollectionFragment", "Collection Key: " + collectionKey);
-        Log.d("CollectionFragment", "Collection Name: " + collectionName);
-        Log.d("CollectionFragment", "Tags (raw): '" + tags + "'");
-        Log.d("CollectionFragment", "User ID: " + userId);
-        Log.d("CollectionFragment", "Show EPUBs: " + userPreferences.getShowEpubs());
-        Log.d("CollectionFragment", "Show PDFs: " + userPreferences.getShowPdfs());
-        Log.d("CollectionFragment", "Books Only: " + userPreferences.getBooksOnly());
-
-        // Show a toast with the tags for debugging
-        if (tags != null && !tags.trim().isEmpty() && getActivity() != null) {
-            getActivity().runOnUiThread(() -> {
-                Toast.makeText(requireContext(),
-                    "Loading items with tags: " + tags,
-                    Toast.LENGTH_LONG).show();
-            });
-        }
-
         zoteroApiClient.getAllEbookItemsWithMetadata(userId, apiKey, collectionKey, tags,
                 new ZoteroApiClient.ZoteroCallback<List<ZoteroItem>>() {
             @Override
             public void onSuccess(List<ZoteroItem> zoteroItems) {
-                Log.d("CollectionFragment", "=== API SUCCESS ===");
                 Log.d("CollectionFragment", "Received " + zoteroItems.size() + " items from API");
-
-                // Log first few items for debugging
-                for (int i = 0; i < Math.min(3, zoteroItems.size()); i++) {
-                    ZoteroItem item = zoteroItems.get(i);
-                    Log.d("CollectionFragment", "Item " + i + ": " + item.getTitle() +
-                          " (Type: " + item.getMimeType() + ")");
-                }
-
                 processZoteroItems(zoteroItems);
             }
 
             @Override
             public void onError(String errorMessage) {
-                Log.e("CollectionFragment", "=== API ERROR ===");
-                Log.e("CollectionFragment", "Error: " + errorMessage);
+                Log.e("CollectionFragment", "API error: " + errorMessage);
                 if (getActivity() == null) return;
 
                 getActivity().runOnUiThread(() -> {
@@ -405,9 +372,6 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         final int totalItems = zoteroItems.size();
         final int[] processedCount = {0};
 
-        final List<ZoteroItem> itemsToSave = Collections.synchronizedList(new ArrayList<>());
-        final List<String> coverPathsToSave = Collections.synchronizedList(new ArrayList<>());
-
         for (ZoteroItem item : zoteroItems) {
             zoteroApiClient.downloadEbook(item, new ZoteroApiClient.FileCallback() {
                 @Override
@@ -425,8 +389,6 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
                             synchronized (newCoverItems) {
                                 newCoverItems.add(coverItem);
-                                itemsToSave.add(item);
-                                coverPathsToSave.add(coverPath);
                                 processedCount[0]++;
 
                                 new Thread(() -> {
@@ -451,8 +413,6 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
                             synchronized (newCoverItems) {
                                 newCoverItems.add(coverItem);
-                                itemsToSave.add(item);
-                                coverPathsToSave.add(null);
                                 processedCount[0]++;
 
                                 new Thread(() -> {
@@ -479,8 +439,6 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
                     synchronized (newCoverItems) {
                         newCoverItems.add(coverItem);
-                        itemsToSave.add(item);
-                        coverPathsToSave.add(null);
                         processedCount[0]++;
 
                         new Thread(() -> {
@@ -556,24 +514,8 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         startActivity(intent);
     }
 
-    public String getCollectionKey() {
-        return collectionKey;
-    }
-
-    public String getCollectionName() {
-        return collectionName;
-    }
-
     public void refresh() {
         refreshCovers();
-    }
-
-    public void updateDisplayMode() {
-        if (adapter != null) {
-            int displayMode = userPreferences.getDisplayMode();
-            adapter = new CoverGridAdapter(requireContext(), coverItems, this, displayMode);
-            recyclerView.setAdapter(adapter);
-        }
     }
 
     public void applySorting() {

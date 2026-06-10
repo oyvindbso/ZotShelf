@@ -129,8 +129,4 @@ public class UserPreferences {
     public boolean hasAnyFileTypeEnabled() {
         return getShowEpubs() || getShowPdfs();
     }
-
-    public void clearAll() {
-        preferences.edit().clear().apply();
-    }
 }

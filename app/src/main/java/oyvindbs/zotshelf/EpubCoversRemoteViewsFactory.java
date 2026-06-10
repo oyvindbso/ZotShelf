@@ -63,7 +63,6 @@ public void onDataSetChanged() {
             for (ZoteroItem item : zoteroItems) {
                 final CountDownLatch itemLatch = new CountDownLatch(1);
                 
-                // Use downloadEbook instead of downloadEpub
                 zoteroApiClient.downloadEbook(item, new ZoteroApiClient.FileCallback() {
                     @Override
                     public void onFileDownloaded(ZoteroItem item, String filePath) {

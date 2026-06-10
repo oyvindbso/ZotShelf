@@ -95,10 +95,6 @@ public class ZoteroItem {
         return data != null ? data.filename : "";
     }
     
-    public String getItemType() {
-        return data != null ? data.itemType : "";
-    }
-    
     public String getParentItemKey() {
         return data != null ? data.parentItemKey : null;
     }
@@ -143,29 +139,6 @@ public class ZoteroItem {
                parentType.equals("thesis") ||
                parentType.equals("report") ||
                parentType.equals("document"); // Some documents might be books
-    }
-    
-    /**
-     * Check if this item represents an article or academic paper
-     * @return true if this is likely an article, false otherwise
-     */
-    public boolean isArticle() {
-        String parentType = getParentItemType();
-        if (parentType == null) {
-            return false;
-        }
-        
-        // Zotero item types that typically represent articles
-        return parentType.equals("journalArticle") ||
-               parentType.equals("magazineArticle") ||
-               parentType.equals("newspaperArticle") ||
-               parentType.equals("conferencePaper") ||
-               parentType.equals("preprint") ||
-               parentType.equals("blogPost") ||
-               parentType.equals("forumPost") ||
-               parentType.equals("patent") ||
-               parentType.equals("case") ||
-               parentType.equals("statute");
     }
     
     public String getAuthors() {

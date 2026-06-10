@@ -107,28 +107,7 @@ public class MainActivity extends AppCompatActivity {
         tabAdapter = new CollectionTabAdapter(this, tabs);
         viewPager.setAdapter(tabAdapter);
 
-        // Connect TabLayout with ViewPager2
-        if (tabLayoutMediator != null) {
-            tabLayoutMediator.detach();
-        }
-
-        tabLayoutMediator = new TabLayoutMediator(tabLayout, viewPager,
-                (tab, position) -> {
-                    TabStateManager.TabInfo tabInfo = tabAdapter.getTabAt(position);
-                    if (tabInfo != null) {
-                        tab.setText(tabInfo.getDisplayName());
-
-                        // Add close button for tabs (except if it's the only tab)
-                        if (tabs.size() > 1) {
-                            tab.view.setOnLongClickListener(v -> {
-                                showCloseTabDialog(position);
-                                return true;
-                            });
-                        }
-                    }
-                }
-        );
-        tabLayoutMediator.attach();
+        attachTabLayoutMediator(tabs.size());
 
         // Restore last selected tab
         int currentTab = tabStateManager.getCurrentTabIndex();
@@ -266,7 +245,16 @@ public class MainActivity extends AppCompatActivity {
         List<TabStateManager.TabInfo> tabs = tabStateManager.getOpenTabs();
         tabAdapter.updateTabs(tabs);
 
-        // Reattach mediator
+        attachTabLayoutMediator(tabs.size());
+
+        // Make sure we're on a valid tab
+        int currentTab = viewPager.getCurrentItem();
+        if (currentTab >= tabs.size()) {
+            viewPager.setCurrentItem(tabs.size() - 1, true);
+        }
+    }
+
+    private void attachTabLayoutMediator(int tabCount) {
         if (tabLayoutMediator != null) {
             tabLayoutMediator.detach();
         }
@@ -277,7 +265,8 @@ public class MainActivity extends AppCompatActivity {
                     if (tabInfo != null) {
                         tab.setText(tabInfo.getDisplayName());
 
-                        if (tabs.size() > 1) {
+                        // Allow closing tabs via long-press (except if it's the only tab)
+                        if (tabCount > 1) {
                             tab.view.setOnLongClickListener(v -> {
                                 showCloseTabDialog(position);
                                 return true;
@@ -287,34 +276,17 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
         tabLayoutMediator.attach();
-
-        // Make sure we're on a valid tab
-        int currentTab = viewPager.getCurrentItem();
-        if (currentTab >= tabs.size()) {
-            viewPager.setCurrentItem(tabs.size() - 1, true);
-        }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
-
-        // Set the checkable state for file type toggles
-        MenuItem epubToggle = menu.findItem(R.id.action_toggle_epubs);
-        MenuItem pdfToggle = menu.findItem(R.id.action_toggle_pdfs);
-
-        if (epubToggle != null) {
-            epubToggle.setChecked(userPreferences.getShowEpubs());
-        }
-        if (pdfToggle != null) {
-            pdfToggle.setChecked(userPreferences.getShowPdfs());
-        }
-
         return true;
     }
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
+        // Set the checkable state for file type toggles
         MenuItem epubToggle = menu.findItem(R.id.action_toggle_epubs);
         MenuItem pdfToggle = menu.findItem(R.id.action_toggle_pdfs);
 

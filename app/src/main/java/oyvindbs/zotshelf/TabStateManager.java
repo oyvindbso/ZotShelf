@@ -79,14 +79,6 @@ public class TabStateManager {
                 return collectionName != null ? collectionName : "All Collections";
             }
         }
-
-        public boolean hasTags() {
-            return tags != null && !tags.trim().isEmpty();
-        }
-
-        public boolean hasCollection() {
-            return collectionKey != null && !collectionKey.isEmpty();
-        }
     }
 
     public List<TabInfo> getOpenTabs() {
@@ -103,7 +95,7 @@ public class TabStateManager {
         return tabs != null ? tabs : new ArrayList<>();
     }
 
-    public void saveOpenTabs(List<TabInfo> tabs) {
+    private void saveOpenTabs(List<TabInfo> tabs) {
         String json = gson.toJson(tabs);
         preferences.edit().putString(KEY_TABS, json).apply();
     }
@@ -176,13 +168,6 @@ public class TabStateManager {
 
     public void setCurrentTabIndex(int index) {
         preferences.edit().putInt(KEY_CURRENT_TAB, index).apply();
-    }
-
-    public void clearAllTabs() {
-        preferences.edit()
-                .remove(KEY_TABS)
-                .remove(KEY_CURRENT_TAB)
-                .apply();
     }
 
     public boolean canAddMoreTabs() {

@@ -31,4 +31,12 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# JVM crash dumps
+hs_err_pid*
+*.mdmp
+
+# R artifacts
 .Rproj.user
+.Rhistory
+*.Rproj

@@ -137,20 +137,4 @@ import androidx.room.PrimaryKey;
   public void setCollectionKeys(String collectionKeys) {
   this.collectionKeys = collectionKeys;
   }
-  
-  // Helper methods for collections
-  public java.util.List<String> getCollectionKeysAsList() {
-  if (collectionKeys == null || collectionKeys.isEmpty()) {
-  return new java.util.ArrayList<>();
-  }
-  return java.util.Arrays.asList(collectionKeys.split("\\|"));
-  }
-  
-  public void setCollectionKeysFromList(java.util.List<String> keys) {
-  if (keys == null || keys.isEmpty()) {
-  this.collectionKeys = "";
-  } else {
-  this.collectionKeys = String.join("|", keys);
-  }
-  }
   }

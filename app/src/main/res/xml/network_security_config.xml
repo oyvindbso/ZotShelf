@@ -1,18 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext traffic for all domains -->
-    <base-config cleartextTrafficPermitted="true">
+    <!-- HTTPS only, trusting system certificates. The app only talks to zotero.org / api.zotero.org. -->
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
-            <!-- Trust system certificates -->
             <certificates src="system" />
-            <!-- Trust user-added certificates (for debugging) -->
-            <certificates src="user" />
         </trust-anchors>
     </base-config>
-
-    <!-- Specific domain config for Zotero (HTTPS only) -->
-    <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">zotero.org</domain>
-        <domain includeSubdomains="true">api.zotero.org</domain>
-    </domain-config>
 </network-security-config>

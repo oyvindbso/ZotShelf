@@ -31,7 +31,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
   database.execSQL("ALTER TABLE epub_covers ADD COLUMN downloadUrl TEXT");
   database.execSQL("ALTER TABLE epub_covers ADD COLUMN parentItemType TEXT");
   database.execSQL("ALTER TABLE epub_covers ADD COLUMN isBook INTEGER DEFAULT 1");
-  database.execSQL("ALTER TABLE epub_covers ADD COLUMN collectionKeys TEXT DEFAULT ‘’");
+  database.execSQL("ALTER TABLE epub_covers ADD COLUMN collectionKeys TEXT DEFAULT ''");
   }
   };
   
