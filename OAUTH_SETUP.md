@@ -66,14 +66,14 @@ $env:ZOTERO_OAUTH_CLIENT_SECRET="your_actual_client_secret"
 gradlew.bat build
 ```
 
-**Or create a local.properties file (not committed to git):**
+**Or add the credentials to `local.properties` in the project root (not committed to git):**
 ```properties
-# Add to .gitignore
 ZOTERO_OAUTH_CLIENT_KEY=your_actual_client_key
 ZOTERO_OAUTH_CLIENT_SECRET=your_actual_client_secret
 ```
 
-Then modify `app/build.gradle` to read from local.properties if environment variables aren't set.
+`app/build.gradle` reads these automatically when the environment variables aren't set,
+so this is the easiest option for building from Android Studio.
 
 ### Step 3: How It Works
 
