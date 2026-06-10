@@ -11,8 +11,8 @@ android {
         applicationId "oyvindbs.zotshelf"
         minSdk 23
         targetSdk 35
-        versionCode 120
-        versionName "1.2cb"
+        versionCode 161
+        versionName "1.61cb"
 
         // OAuth credentials from environment variables (Bitrise secrets)
         // Fallback to placeholder values for local development
