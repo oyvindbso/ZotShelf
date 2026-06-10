@@ -145,9 +145,6 @@ public class OAuthLoginActivity extends AppCompatActivity {
             // Enable DOM storage (required for some OAuth pages)
             webView.getSettings().setDomStorageEnabled(true);
 
-            // Allow mixed content (HTTP and HTTPS)
-            webView.getSettings().setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-
             // Enable zoom controls
             webView.getSettings().setBuiltInZoomControls(true);
             webView.getSettings().setDisplayZoomControls(false);
