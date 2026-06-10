@@ -61,24 +61,6 @@ public class EpubCoverRepository {
         }
     }
 
-    public void saveCoversFromZoteroItems(List<ZoteroItem> items, List<String> coverPaths) {
-        executor.execute(() -> {
-            try {
-                List<EpubCoverEntity> entities = new ArrayList<>();
-                for (int i = 0; i < items.size() && i < coverPaths.size(); i++) {
-                    ZoteroItem item = items.get(i);
-                    String coverPath = coverPaths.get(i);
-                    EpubCoverEntity entity = createEntityFromZoteroItem(item, coverPath);
-                    entities.add(entity);
-                }
-                database.epubCoverDao().insertAll(entities);
-                Log.d(TAG, "Saved " + entities.size() + " covers to database");
-            } catch (Exception e) {
-                Log.e(TAG, "Error saving covers", e);
-            }
-        });
-    }
-
     private EpubCoverEntity createEntityFromZoteroItem(ZoteroItem item, String coverPath) {
         EpubCoverEntity entity = new EpubCoverEntity(
                 item.getKey(),
@@ -107,19 +89,6 @@ public class EpubCoverRepository {
         return entity;
     }
 
-    public void getFilteredCovers(CoverRepositoryCallback callback) {
-        executor.execute(() -> {
-            try {
-                List<EpubCoverEntity> entities = getFilteredEntities();
-                List<EpubCoverItem> coverItems = convertEntitiesToCoverItems(entities);
-                mainHandler.post(() -> callback.onCoversLoaded(coverItems));
-            } catch (Exception e) {
-                Log.e(TAG, "Error loading filtered covers", e);
-                mainHandler.post(() -> callback.onError("Error loading covers: " + e.getMessage()));
-            }
-        });
-    }
-
     public void getFilteredCoversForCollection(String collectionKey, CoverRepositoryCallback callback) {
         executor.execute(() -> {
             try {
@@ -131,23 +100,6 @@ public class EpubCoverRepository {
                 mainHandler.post(() -> callback.onError("Error loading covers: " + e.getMessage()));
             }
         });
-    }
-
-    private List<EpubCoverEntity> getFilteredEntities() {
-        boolean booksOnly = userPreferences.getBooksOnly();
-        boolean showEpubs = userPreferences.getShowEpubs();
-        boolean showPdfs = userPreferences.getShowPdfs();
-        String collectionKey = userPreferences.getSelectedCollectionKey();
-
-        List<EpubCoverEntity> entities;
-        if (collectionKey != null && !collectionKey.isEmpty()) {
-            entities = database.epubCoverDao().getCoversByCollection(collectionKey, booksOnly, showEpubs, showPdfs);
-        } else {
-            entities = database.epubCoverDao().getCoversByPreferences(booksOnly, showEpubs, showPdfs);
-        }
-
-        Log.d(TAG, "Loaded " + entities.size() + " covers from database with filters applied");
-        return entities;
     }
 
     private List<EpubCoverEntity> getFilteredEntitiesForCollection(String collectionKey) {
@@ -189,27 +141,6 @@ public class EpubCoverRepository {
         return coverItems;
     }
 
-    public void saveCovers(List<EpubCoverItem> coverItems) {
-        executor.execute(() -> {
-            List<EpubCoverEntity> entities = new ArrayList<>();
-            for (EpubCoverItem item : coverItems) {
-                EpubCoverEntity entity = new EpubCoverEntity(
-                        item.getId(),
-                        item.getTitle(),
-                        item.getAuthors(),
-                        item.getCoverPath(),
-                        item.getZoteroUsername()
-                );
-                entities.add(entity);
-            }
-            database.epubCoverDao().insertAll(entities);
-        });
-    }
-
-    public void getLocalCovers(CoverRepositoryCallback callback) {
-        getFilteredCovers(callback);
-    }
-
     public void hasCachedCovers(BooleanCallback callback) {
         executor.execute(() -> {
             try {
@@ -221,28 +152,4 @@ public class EpubCoverRepository {
         });
     }
 
-    public void clearCovers() {
-        executor.execute(() -> database.epubCoverDao().deleteAll());
-    }
-
-    public void cleanupOldData(int maxAgeInDays) {
-        executor.execute(() -> {
-            try {
-                long cutoffTime = System.currentTimeMillis() - (maxAgeInDays * 24 * 60 * 60 * 1000L);
-                List<EpubCoverEntity> oldEntities = database.epubCoverDao().getCoversModifiedSince(0);
-                int deletedCount = database.epubCoverDao().deleteOldEntries(cutoffTime);
-                for (EpubCoverEntity entity : oldEntities) {
-                    if (entity.getLastUpdated() < cutoffTime && entity.getCoverPath() != null) {
-                        File coverFile = new File(entity.getCoverPath());
-                        if (coverFile.exists()) {
-                            coverFile.delete();
-                        }
-                    }
-                }
-                Log.d(TAG, "Cleaned up " + deletedCount + " old database entries");
-            } catch (Exception e) {
-                Log.e(TAG, "Error during cleanup", e);
-            }
-        });
-    }
 }

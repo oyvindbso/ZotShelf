@@ -45,8 +45,4 @@ public class CollectionTabAdapter extends FragmentStateAdapter {
         }
         return null;
     }
-
-    public List<TabStateManager.TabInfo> getTabs() {
-        return new ArrayList<>(tabs);
-    }
 }

@@ -32,11 +32,6 @@ public class CoverGridAdapter extends RecyclerView.Adapter<CoverGridAdapter.Cove
         this.listener = listener;
         this.displayMode = displayMode;
     }
-    
-    // Getter for display mode - needed for checking if mode has changed
-    public int getDisplayMode() {
-        return displayMode;
-    }
 
     @NonNull
     @Override

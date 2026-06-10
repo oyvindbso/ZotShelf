@@ -5,13 +5,8 @@ plugins {
 android {
     namespace 'oyvindbs.zotshelf'
 
-    testOptions {
-        unitTests.all {
-            enabled = false
-        }
-    } 
     compileSdk 35
-    
+
     defaultConfig {
         applicationId "oyvindbs.zotshelf"
         minSdk 23
@@ -69,10 +64,8 @@ dependencies {
     // Retrofit for API calls
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-    implementation 'com.squareup.okhttp3:logging-interceptor:4.11.0'
 
     // OAuth 1.0a for Zotero authentication
-    implementation 'se.akerfeldt:okhttp-signpost:1.1.0'
     implementation 'oauth.signpost:signpost-core:2.1.1'
 
     // Glide for image loading
