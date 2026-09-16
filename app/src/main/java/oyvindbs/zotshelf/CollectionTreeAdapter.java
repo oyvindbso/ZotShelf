@@ -1,6 +1,7 @@
 package oyvindbs.zotshelf;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,6 +10,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
+import androidx.core.widget.ImageViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
@@ -62,12 +65,23 @@ public class CollectionTreeAdapter extends RecyclerView.Adapter<CollectionTreeAd
         // Set name
         holder.nameView.setText(item.getName());
         
-        // Highlight selected item
-        if (item.isSelected()) {
-            holder.cardView.setCardBackgroundColor(context.getResources().getColor(R.color.purple_200, null));
-        } else {
-            holder.cardView.setCardBackgroundColor(context.getResources().getColor(android.R.color.white, null));
-        }
+        // Highlight selected item. Colors are fixed (not theme-dependent) and chosen
+        // together with the text/icon colors below so items never blend into the
+        // screen background or into each other, in either light or dark mode.
+        int backgroundColorRes = item.isSelected()
+                ? R.color.collection_item_selected_background
+                : R.color.collection_item_background;
+        int textColorRes = item.isSelected()
+                ? R.color.collection_item_selected_text
+                : R.color.collection_item_text;
+        int iconTintRes = item.isSelected()
+                ? R.color.collection_item_selected_icon_tint
+                : R.color.collection_item_icon_tint;
+
+        holder.cardView.setCardBackgroundColor(ContextCompat.getColor(context, backgroundColorRes));
+        holder.nameView.setTextColor(ContextCompat.getColor(context, textColorRes));
+        ImageViewCompat.setImageTintList(holder.iconView,
+                ColorStateList.valueOf(ContextCompat.getColor(context, iconTintRes)));
         
         // Set click listener
         holder.itemView.setOnClickListener(v -> {

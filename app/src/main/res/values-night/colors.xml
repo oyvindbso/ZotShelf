@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Collection tree item colors for dark mode: kept distinct from the
+         near-black window background and from each other for readability. -->
+    <color name="collection_item_background">#FF2E2E2E</color>
+    <color name="collection_item_selected_background">#FF6247A5</color>
+    <color name="collection_item_text">#FFECECEC</color>
+    <color name="collection_item_selected_text">#FFFFFFFF</color>
+    <color name="collection_item_icon_tint">#FFBDBDBD</color>
+    <color name="collection_item_selected_icon_tint">#FFFFFFFF</color>
+</resources>

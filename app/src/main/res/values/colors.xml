@@ -8,4 +8,13 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="widget_background_color">#EFEFEF</color>
+
+    <!-- Collection tree item colors: fixed (not theme-dependent) so the card,
+         its text and its icon keep readable contrast regardless of day/night mode. -->
+    <color name="collection_item_background">#FFF2F2F2</color>
+    <color name="collection_item_selected_background">#FFD0BCFF</color>
+    <color name="collection_item_text">#FF212121</color>
+    <color name="collection_item_selected_text">#FF3700B3</color>
+    <color name="collection_item_icon_tint">#FF616161</color>
+    <color name="collection_item_selected_icon_tint">#FF3700B3</color>
 </resources>
