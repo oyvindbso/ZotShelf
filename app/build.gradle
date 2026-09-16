@@ -17,12 +17,12 @@ def oauthSecret = { String name, String placeholder ->
 android {
     namespace 'oyvindbs.zotshelf'
 
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "oyvindbs.zotshelf"
         minSdk 23
-        targetSdk 35
+        targetSdk 36
         versionCode 161
         versionName "1.61cb"
 
