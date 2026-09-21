@@ -63,5 +63,16 @@
             android:textSize="16sp"
             android:layout_marginBottom="16dp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/privacy"
+            android:autoLink="web"
+            android:textColorLink="#1E88E5"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp" />
+
+ 
+
     </LinearLayout>
 </ScrollView>
