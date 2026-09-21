@@ -7,6 +7,7 @@
     <string name="settings_saved">Settings saved</string>
     <string name="enter_credentials">Please enter your Zotero credentials</string>
     <string name="keys">You can find your Zotero API key at:\nhttps://www.zotero.org/settings/keys</string>
+    <string name="privacy">Zotshelf does not collect any info from the user. See more here https://oyvindsolheim.com/other/zotshelf/terms_service</string>
     <string name="credentials">To use this app, you need to enter your Zotero credentials in the Settings.</string>
     <string name="features">Features:</string>
     <string name="feature_list">• View all your EPUB and PDF books at a glance\n• Tap any cover to open the book in your Zotero Web Library\n• Pull down to refresh your collection\n• Supports both EPUB and PDF file formats</string>
