@@ -20,7 +20,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import oyvindbs.zotshelf.database.EpubCoverRepository;
 import oyvindbs.zotshelf.utils.NetworkUtils;
@@ -37,6 +39,7 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
     private RecyclerView recyclerView;
     private CoverGridAdapter adapter;
+    private int adapterDisplayMode;
     private List<EpubCoverItem> coverItems = new ArrayList<>();
     private ProgressBar progressBar;
     private TextView emptyView;
@@ -86,6 +89,7 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), spanCount));
         int displayMode = userPreferences.getDisplayMode();
         adapter = new CoverGridAdapter(requireContext(), coverItems, this, displayMode);
+        adapterDisplayMode = displayMode;
         recyclerView.setAdapter(adapter);
 
         // Setup refresh listener
@@ -253,7 +257,9 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
             public void onSuccess(List<ZoteroItem> zoteroItems) {
                 Log.d("CollectionFragment", "Background update: Received " +
                         zoteroItems.size() + " items from API");
-                processZoteroItemsForCache(zoteroItems);
+                // Replaces the cached list on screen with what is in Zotero now, so books
+                // added to or removed from the collection show up without a restart
+                processZoteroItems(zoteroItems);
 
                 if (getActivity() == null) return;
                 getActivity().runOnUiThread(() -> {
@@ -273,36 +279,6 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                 });
             }
         });
-    }
-
-    private void processZoteroItemsForCache(List<ZoteroItem> zoteroItems) {
-        if (zoteroItems.isEmpty()) {
-            return;
-        }
-
-        for (ZoteroItem item : zoteroItems) {
-            zoteroApiClient.downloadEbook(item, new ZoteroApiClient.FileCallback() {
-                @Override
-                public void onFileDownloaded(ZoteroItem item, String filePath) {
-                    CoverExtractor.extractCover(filePath, new CoverExtractor.CoverCallback() {
-                        @Override
-                        public void onCoverExtracted(String coverPath) {
-                            coverRepository.saveCoverFromZoteroItem(item, coverPath);
-                        }
-
-                        @Override
-                        public void onError(String errorMessage) {
-                            coverRepository.saveCoverFromZoteroItem(item, null);
-                        }
-                    });
-                }
-
-                @Override
-                public void onError(ZoteroItem item, String errorMessage) {
-                    coverRepository.saveCoverFromZoteroItem(item, null);
-                }
-            });
-        }
     }
 
     private void loadCachedCovers() {
@@ -338,8 +314,14 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         });
     }
 
+    /**
+     * Gets the covers for a complete list of items from Zotero, caches them and shows them.
+     * Covers extracted earlier are reused; otherwise the book is downloaded, its cover
+     * extracted and the book deleted again.
+     */
     private void processZoteroItems(List<ZoteroItem> zoteroItems) {
         if (zoteroItems.isEmpty()) {
+            syncCollectionMembership(new HashSet<>());
             if (getActivity() == null) return;
 
             getActivity().runOnUiThread(() -> {
@@ -368,85 +350,51 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
         Log.d("CollectionFragment", "Processing " + zoteroItems.size() + " Zotero items");
 
-        List<EpubCoverItem> newCoverItems = new ArrayList<>();
+        // Label cached items with the collection they were loaded for (not with whichever
+        // collection was picked last), so each tab only shows its own books from the cache
+        final String labelCollectionKey =
+                (collectionKey != null && !collectionKey.isEmpty()) ? collectionKey : null;
+
+        final List<EpubCoverItem> newCoverItems = new ArrayList<>();
         final int totalItems = zoteroItems.size();
         final int[] processedCount = {0};
 
         for (ZoteroItem item : zoteroItems) {
-            zoteroApiClient.downloadEbook(item, new ZoteroApiClient.FileCallback() {
+            zoteroApiClient.fetchCover(item, new ZoteroApiClient.CoverFetchCallback() {
                 @Override
-                public void onFileDownloaded(ZoteroItem item, String filePath) {
-                    CoverExtractor.extractCover(filePath, new CoverExtractor.CoverCallback() {
-                        @Override
-                        public void onCoverExtracted(String coverPath) {
-                            EpubCoverItem coverItem = new EpubCoverItem(
-                                    item.getKey(),
-                                    item.getTitle(),
-                                    coverPath,
-                                    item.getAuthors(),
-                                    userPreferences.getZoteroUsername()
-                            );
-
-                            synchronized (newCoverItems) {
-                                newCoverItems.add(coverItem);
-                                processedCount[0]++;
-
-                                new Thread(() -> {
-                                    coverRepository.saveCoverFromZoteroItemSync(item, coverPath);
-                                }).start();
-
-                                if (processedCount[0] == totalItems) {
-                                    updateUI(newCoverItems);
-                                }
-                            }
-                        }
-
-                        @Override
-                        public void onError(String errorMessage) {
-                            EpubCoverItem coverItem = new EpubCoverItem(
-                                    item.getKey(),
-                                    item.getTitle(),
-                                    null,
-                                    item.getAuthors(),
-                                    userPreferences.getZoteroUsername()
-                            );
-
-                            synchronized (newCoverItems) {
-                                newCoverItems.add(coverItem);
-                                processedCount[0]++;
-
-                                new Thread(() -> {
-                                    coverRepository.saveCoverFromZoteroItemSync(item, null);
-                                }).start();
-
-                                if (processedCount[0] == totalItems) {
-                                    updateUI(newCoverItems);
-                                }
-                            }
-                        }
-                    });
+                public void onCoverReady(ZoteroItem item, String coverPath) {
+                    // A null cover path shows the placeholder
+                    onItemProcessed(item, item.getTitle(), coverPath);
                 }
 
                 @Override
-                public void onError(ZoteroItem item, String errorMessage) {
+                public void onDownloadFailed(ZoteroItem item, String errorMessage) {
+                    onItemProcessed(item, item.getTitle() + " (Download failed)", null);
+                }
+
+                private void onItemProcessed(ZoteroItem item, String title, String coverPath) {
                     EpubCoverItem coverItem = new EpubCoverItem(
                             item.getKey(),
-                            item.getTitle() + " (Download failed)",
-                            null,
+                            title,
+                            coverPath,
                             item.getAuthors(),
                             userPreferences.getZoteroUsername()
                     );
+
+                    // Queued before the membership update below, which runs on the same thread
+                    coverRepository.saveCoverFromZoteroItem(item, coverPath, labelCollectionKey);
 
                     synchronized (newCoverItems) {
                         newCoverItems.add(coverItem);
                         processedCount[0]++;
 
-                        new Thread(() -> {
-                            coverRepository.saveCoverFromZoteroItemSync(item, null);
-                        }).start();
-
                         if (processedCount[0] == totalItems) {
-                            updateUI(newCoverItems);
+                            Set<String> itemIds = new HashSet<>();
+                            for (EpubCoverItem processed : newCoverItems) {
+                                itemIds.add(processed.getId());
+                            }
+                            syncCollectionMembership(itemIds);
+                            updateUI(new ArrayList<>(newCoverItems));
                         }
                     }
                 }
@@ -454,10 +402,23 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
         }
     }
 
+    /**
+     * For a plain collection tab (no tag filter) the fetched list is the complete collection,
+     * so cached items that are no longer in it can lose the collection's label.
+     */
+    private void syncCollectionMembership(Set<String> itemIdsInCollection) {
+        boolean hasTagFilter = tags != null && !tags.trim().isEmpty();
+        if (collectionKey != null && !collectionKey.isEmpty() && !hasTagFilter) {
+            coverRepository.syncCollectionMembership(collectionKey, itemIdsInCollection);
+        }
+    }
+
     private void updateUI(final List<EpubCoverItem> newItems) {
         if (getActivity() == null) return;
 
         getActivity().runOnUiThread(() -> {
+            if (!isAdded()) return;
+
             coverItems.clear();
             coverItems.addAll(newItems);
 
@@ -466,8 +427,15 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
             CoverSorter.sortCovers(coverItems, sortMode);
 
             int displayMode = userPreferences.getDisplayMode();
-            adapter = new CoverGridAdapter(requireContext(), coverItems, this, displayMode);
-            recyclerView.setAdapter(adapter);
+            if (adapter != null && displayMode == adapterDisplayMode) {
+                // Same adapter: keeps the scroll position when a background refresh
+                // replaces the cached list
+                adapter.notifyDataSetChanged();
+            } else {
+                adapter = new CoverGridAdapter(requireContext(), coverItems, this, displayMode);
+                adapterDisplayMode = displayMode;
+                recyclerView.setAdapter(adapter);
+            }
 
             if (coverItems.isEmpty()) {
                 showEmptyState("No EPUB files found");
@@ -533,6 +501,7 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                 } else {
                     int displayMode = userPreferences.getDisplayMode();
                     adapter = new CoverGridAdapter(requireContext(), coverItems, this, displayMode);
+                    adapterDisplayMode = displayMode;
                     recyclerView.setAdapter(adapter);
                 }
             }

@@ -27,7 +27,7 @@ import androidx.room.PrimaryKey;
   private String downloadUrl; // Original download URL (for re-downloading if needed)
   private String parentItemType; // Type of parent item (book, article, etc.)
   private boolean isBook; // Cached result of isBook() check
-  private String collectionKeys; // Pipe-separated collection keys this item belongs to
+  private String collectionKeys; // Collections this item is in, stored as ",KEY1,KEY2,"
   
   public EpubCoverEntity(@NonNull String id, String title, String authors,
   String coverPath, String zoteroUsername) {

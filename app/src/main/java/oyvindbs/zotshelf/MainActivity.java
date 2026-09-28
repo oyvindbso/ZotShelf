@@ -55,6 +55,9 @@ public class MainActivity extends AppCompatActivity {
         tabStateManager = new TabStateManager(this);
         knownCacheClearGeneration = CacheManager.getClearGeneration();
 
+        // Free the space used by books older versions kept after extracting their covers
+        CacheManager.deleteLeftoverBooks(this);
+
         if (savedInstanceState != null) {
             hasAutoOpenedCollectionPicker =
                     savedInstanceState.getBoolean(STATE_AUTO_OPENED_PICKER, false);

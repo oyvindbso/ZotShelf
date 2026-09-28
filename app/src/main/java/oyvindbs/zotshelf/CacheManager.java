@@ -14,9 +14,9 @@ import java.util.concurrent.Executors;
 import oyvindbs.zotshelf.database.AppDatabase;
 
 /**
- * Measures and deletes the files ZotShelf keeps on the device: the downloaded
- * EPUB/PDF files, the extracted cover images, Glide's image cache and the cached
- * cover list in the database. Nothing in the user's Zotero library is touched.
+ * Measures and deletes the files ZotShelf keeps on the device: the extracted cover
+ * images (plus any downloaded book still being processed), Glide's image cache and
+ * the cached cover list in the database. Nothing in the user's Zotero library is touched.
  */
 public final class CacheManager {
 
@@ -24,6 +24,8 @@ public final class CacheManager {
 
     /** Must match the directory ZoteroApiClient downloads into. */
     static final String EBOOK_CACHE_DIR_NAME = "epubs";
+    /** Must match the subdirectory CoverExtractor writes covers to. */
+    static final String COVERS_DIR_NAME = "covers";
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -48,6 +50,57 @@ public final class CacheManager {
 
     public static File getEbookCacheDir(Context context) {
         return new File(context.getFilesDir(), EBOOK_CACHE_DIR_NAME);
+    }
+
+    /** Where CoverExtractor puts the cover for the attachment with this key. */
+    public static File getCoverFile(Context context, String itemKey) {
+        return new File(new File(getEbookCacheDir(context), COVERS_DIR_NAME), itemKey + ".jpg");
+    }
+
+    /** Empty file marking a book whose cover could not be extracted, so it isn't downloaded again. */
+    public static File getNoCoverMarker(Context context, String itemKey) {
+        return new File(new File(getEbookCacheDir(context), COVERS_DIR_NAME), itemKey + ".nocover");
+    }
+
+    /**
+     * Deletes downloaded books that are not being processed right now. Books are normally
+     * deleted as soon as their cover is extracted; this removes any left behind by older
+     * versions of the app or by an interrupted download.
+     */
+    public static void deleteLeftoverBooks(Context context) {
+        final Context appContext = context.getApplicationContext();
+        executor.execute(() -> {
+            File[] files = getEbookCacheDir(appContext).listFiles();
+            if (files == null) {
+                return;
+            }
+
+            int deleted = 0;
+            for (File file : files) {
+                String name = file.getName();
+                int dot = name.lastIndexOf('.');
+                if (!file.isFile() || dot <= 0) {
+                    continue;
+                }
+
+                String extension = name.substring(dot).toLowerCase();
+                if (!extension.equals(".epub") && !extension.equals(".pdf")) {
+                    continue;
+                }
+
+                if (ZoteroApiClient.isCoverInFlight(name.substring(0, dot))) {
+                    continue;
+                }
+
+                if (file.delete()) {
+                    deleted++;
+                }
+            }
+
+            if (deleted > 0) {
+                Log.d(TAG, "Deleted " + deleted + " leftover downloaded books");
+            }
+        });
     }
 
     /** Calculates the size of the cached files in the background; the callback runs on the main thread. */

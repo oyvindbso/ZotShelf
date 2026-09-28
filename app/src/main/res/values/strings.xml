@@ -28,10 +28,10 @@
     <string name="storage_settings">Storage</string>
     <string name="cache_size_calculating">Cached files: calculating…</string>
     <string name="cache_size_format">Cached files: %1$s</string>
-    <string name="cache_explanation">Downloaded books and cover images are kept on this device. Deleting them frees up space; covers are downloaded again the next time you open a tab. Your Zotero library is not affected.</string>
+    <string name="cache_explanation">Cover images are kept on this device so your shelves load quickly. Books are only downloaded briefly to get their covers and are deleted right after. Deleting the cache frees up space; covers are fetched again the next time you open a tab. Your Zotero library is not affected.</string>
     <string name="delete_cached_files">Delete cached files</string>
     <string name="delete_cached_files_confirm_title">Delete cached files?</string>
-    <string name="delete_cached_files_confirm_message">This deletes %1$s of downloaded books and cover images from this device. Nothing is deleted from Zotero.</string>
+    <string name="delete_cached_files_confirm_message">This deletes %1$s of cached cover images from this device. Nothing is deleted from Zotero.</string>
     <string name="delete">Delete</string>
     <string name="deleting_cached_files">Deleting cached files…</string>
     <string name="cached_files_deleted">Cached files deleted (%1$s freed)</string>
