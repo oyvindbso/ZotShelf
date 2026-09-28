@@ -43,7 +43,7 @@ public class ZoteroApiClient {
         this.context = context;
         this.executor = Executors.newCachedThreadPool();
 
-        this.cacheDir = new File(context.getFilesDir(), "epubs");
+        this.cacheDir = CacheManager.getEbookCacheDir(context);
         if (!cacheDir.exists()) {
             cacheDir.mkdirs();
         }
@@ -254,6 +254,11 @@ public class ZoteroApiClient {
             } else {
                 callback.onError(item, "Unsupported file type: " + mimeType);
                 return;
+            }
+
+            // The cache may have been emptied from Settings while this client was alive
+            if (!cacheDir.exists()) {
+                cacheDir.mkdirs();
             }
 
             String fileName = item.getKey() + fileExtension;

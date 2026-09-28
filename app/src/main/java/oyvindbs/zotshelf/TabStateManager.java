@@ -81,18 +81,25 @@ public class TabStateManager {
         }
     }
 
+    /**
+     * Returns the tabs the user has opened. There is deliberately no default
+     * "All Collections" tab: loading the whole library downloads every ebook,
+     * which is impractical for large libraries. When this list is empty the
+     * main screen asks the user to choose a collection instead.
+     */
     public List<TabInfo> getOpenTabs() {
         String json = preferences.getString(KEY_TABS, null);
         if (json == null || json.isEmpty()) {
-            // Return default tab (All Collections)
-            List<TabInfo> defaultTabs = new ArrayList<>();
-            defaultTabs.add(new TabInfo(null, "All Collections"));
-            return defaultTabs;
+            return new ArrayList<>();
         }
 
         Type type = new TypeToken<List<TabInfo>>(){}.getType();
         List<TabInfo> tabs = gson.fromJson(json, type);
         return tabs != null ? tabs : new ArrayList<>();
+    }
+
+    public boolean hasTabs() {
+        return !getOpenTabs().isEmpty();
     }
 
     private void saveOpenTabs(List<TabInfo> tabs) {
@@ -147,17 +154,14 @@ public class TabStateManager {
         if (position >= 0 && position < tabs.size()) {
             tabs.remove(position);
 
-            // Ensure at least one tab remains
-            if (tabs.isEmpty()) {
-                tabs.add(new TabInfo(null, "All Collections"));
-            }
-
+            // Closing the last tab is allowed; the main screen then shows the
+            // "choose a collection" prompt instead of falling back to the whole library.
             saveOpenTabs(tabs);
 
             // Adjust current tab index if necessary
             int currentTab = getCurrentTabIndex();
             if (currentTab >= tabs.size()) {
-                setCurrentTabIndex(tabs.size() - 1);
+                setCurrentTabIndex(Math.max(0, tabs.size() - 1));
             }
         }
     }

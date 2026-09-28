@@ -1,18 +1,22 @@
 package oyvindbs.zotshelf;
 
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.format.Formatter;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.textfield.TextInputEditText;
@@ -31,6 +35,9 @@ public class SettingsActivity extends AppCompatActivity {
     private RadioButton radioAuthorTitle;
     private Button buttonSave;
     private Button buttonOAuthLogin;
+    private TextView textCacheSize;
+    private Button buttonClearCache;
+    private long lastKnownCacheSize = 0;
     private UserPreferences userPreferences;
 
     private static final int OAUTH_LOGIN_REQUEST = 1001;
@@ -60,6 +67,8 @@ public class SettingsActivity extends AppCompatActivity {
         radioAuthorTitle = findViewById(R.id.radioAuthorTitle);
         buttonSave = findViewById(R.id.buttonSave);
         buttonOAuthLogin = findViewById(R.id.buttonOAuthLogin);
+        textCacheSize = findViewById(R.id.textCacheSize);
+        buttonClearCache = findViewById(R.id.buttonClearCache);
 
         // Initialize preferences
         userPreferences = new UserPreferences(this);
@@ -72,6 +81,51 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Setup OAuth login button
         buttonOAuthLogin.setOnClickListener(v -> startOAuthLogin());
+
+        // Setup storage section
+        buttonClearCache.setOnClickListener(v -> confirmClearCache());
+        updateCacheSize();
+    }
+
+    private void updateCacheSize() {
+        // Keep the button disabled until we know how much will be deleted
+        buttonClearCache.setEnabled(false);
+        textCacheSize.setText(R.string.cache_size_calculating);
+
+        CacheManager.calculateCacheSize(this, bytes -> {
+            if (isFinishing() || isDestroyed()) return;
+
+            lastKnownCacheSize = bytes;
+            textCacheSize.setText(getString(R.string.cache_size_format,
+                    Formatter.formatShortFileSize(this, bytes)));
+            buttonClearCache.setEnabled(true);
+        });
+    }
+
+    private void confirmClearCache() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.delete_cached_files_confirm_title)
+                .setMessage(getString(R.string.delete_cached_files_confirm_message,
+                        Formatter.formatShortFileSize(this, lastKnownCacheSize)))
+                .setPositiveButton(R.string.delete, (dialog, which) -> clearCache())
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void clearCache() {
+        buttonClearCache.setEnabled(false);
+        textCacheSize.setText(R.string.deleting_cached_files);
+
+        CacheManager.clearCache(this, bytesFreed -> {
+            // Use the application context so the message still shows if the user has left Settings
+            Context appContext = getApplicationContext();
+            Toast.makeText(appContext, appContext.getString(R.string.cached_files_deleted,
+                    Formatter.formatShortFileSize(appContext, bytesFreed)),
+                    Toast.LENGTH_SHORT).show();
+
+            if (isFinishing() || isDestroyed()) return;
+            updateCacheSize();
+        });
     }
 
     @Override

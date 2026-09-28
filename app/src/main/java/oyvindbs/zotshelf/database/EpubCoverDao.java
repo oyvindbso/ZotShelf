@@ -19,6 +19,9 @@ public interface EpubCoverDao {
     @Query("SELECT COUNT(id) FROM epub_covers")
     int getCount();
 
+    @Query("DELETE FROM epub_covers")
+    void deleteAll();
+
     @Query("SELECT * FROM epub_covers WHERE " +
            "((:booksOnly = 1 AND isBook = 1) OR (:booksOnly = 0)) AND " +
            "((:showEpubs = 1 AND mimeType = 'application/epub+zip') OR " +
