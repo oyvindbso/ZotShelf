@@ -4,7 +4,7 @@ ZotShelf extracts covers from the EPUBs in your [Zotero](https://www.zotero.org)
 
 Zotshelf allows you to select a collection, a set of tags or a combination of a collection and tag(s).
 
-The app is currently in closed beta testing. Contact me if you would like to test it at appbugge@gmail.com. 
+The app is available on [Google Play](https://play.google.com/store/apps/details?id=oyvindbs.zotshelf). Contact me if you encounter any issues or have feature requests at [appbugge@gmail.com](mailto:appbugge@gmail.com). 
 
 ## How It Works
 
