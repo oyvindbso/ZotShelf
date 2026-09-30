@@ -27,16 +27,24 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_SELECT_COLLECTION = 1001;
     private static final int REQUEST_CODE_SELECT_COLLECTION_WITH_TAGS = 1002;
+    private static final String STATE_AUTO_OPENED_PICKER = "auto_opened_collection_picker";
     private String pendingTags = null;
 
     private TabLayout tabLayout;
     private ViewPager2 viewPager;
     private FloatingActionButton fabAddTab;
+    private View emptyTabsLayout;
     private CollectionTabAdapter tabAdapter;
     private TabStateManager tabStateManager;
     private UserPreferences userPreferences;
     private TabLayoutMediator tabLayoutMediator;
     private boolean isFirstResume = true;
+    // The collection picker is opened automatically at most once per screen, so
+    // backing out of it leaves the user on the "choose a collection" prompt.
+    private boolean hasAutoOpenedCollectionPicker = false;
+    // Set when a tab was just added; that tab loads itself, so onResume must not load it again.
+    private boolean skipNextResumeRefresh = false;
+    private int knownCacheClearGeneration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,10 +53,21 @@ public class MainActivity extends AppCompatActivity {
 
         userPreferences = new UserPreferences(this);
         tabStateManager = new TabStateManager(this);
+        knownCacheClearGeneration = CacheManager.getClearGeneration();
+
+        // Free the space used by books older versions kept after extracting their covers
+        CacheManager.deleteLeftoverBooks(this);
+
+        if (savedInstanceState != null) {
+            hasAutoOpenedCollectionPicker =
+                    savedInstanceState.getBoolean(STATE_AUTO_OPENED_PICKER, false);
+        }
 
         tabLayout = findViewById(R.id.tabLayout);
         viewPager = findViewById(R.id.viewPager);
         fabAddTab = findViewById(R.id.fabAddTab);
+        emptyTabsLayout = findViewById(R.id.emptyTabsLayout);
+        findViewById(R.id.buttonChooseCollection).setOnClickListener(v -> openCollectionPicker());
 
         // Handle window insets to prevent tab headers from overlapping with status bar
         View rootView = findViewById(android.R.id.content);
@@ -77,8 +96,16 @@ public class MainActivity extends AppCompatActivity {
 
         // Handle widget click intent
         if (getIntent().hasExtra("fromWidget")) {
+            // The user came to open a book, not to set up tabs
+            hasAutoOpenedCollectionPicker = true;
             handleWidgetClick(getIntent());
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(STATE_AUTO_OPENED_PICKER, hasAutoOpenedCollectionPicker);
     }
 
     @Override
@@ -107,7 +134,8 @@ public class MainActivity extends AppCompatActivity {
         tabAdapter = new CollectionTabAdapter(this, tabs);
         viewPager.setAdapter(tabAdapter);
 
-        attachTabLayoutMediator(tabs.size());
+        attachTabLayoutMediator();
+        updateEmptyTabsState(tabs.isEmpty());
 
         // Restore last selected tab
         int currentTab = tabStateManager.getCurrentTabIndex();
@@ -123,6 +151,48 @@ public class MainActivity extends AppCompatActivity {
                 tabStateManager.setCurrentTabIndex(position);
             }
         });
+    }
+
+    /**
+     * With no tabs open (first launch, or after closing the last tab) show a prompt to
+     * choose a collection instead of an empty pager.
+     */
+    private void updateEmptyTabsState(boolean noTabs) {
+        emptyTabsLayout.setVisibility(noTabs ? View.VISIBLE : View.GONE);
+        tabLayout.setVisibility(noTabs ? View.GONE : View.VISIBLE);
+        viewPager.setVisibility(noTabs ? View.GONE : View.VISIBLE);
+    }
+
+    private void openCollectionPicker() {
+        if (!userPreferences.hasZoteroCredentials()) {
+            Toast.makeText(this, R.string.enter_credentials, Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, SettingsActivity.class));
+            return;
+        }
+
+        if (!NetworkUtils.isNetworkAvailable(this)) {
+            Toast.makeText(this, R.string.no_internet_collections, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Intent intent = new Intent(this, CollectionTreeActivity.class);
+        startActivityForResult(intent, REQUEST_CODE_SELECT_COLLECTION);
+    }
+
+    /**
+     * On first launch there are no tabs. Rather than loading (and downloading) the whole
+     * library, take the user straight to the collection picker.
+     */
+    private void maybeAutoOpenCollectionPicker() {
+        if (hasAutoOpenedCollectionPicker
+                || tabStateManager.hasTabs()
+                || !userPreferences.hasZoteroCredentials()
+                || !NetworkUtils.isNetworkAvailable(this)) {
+            return;
+        }
+
+        hasAutoOpenedCollectionPicker = true;
+        openCollectionPicker();
     }
 
     private void setupFab() {
@@ -152,13 +222,7 @@ public class MainActivity extends AppCompatActivity {
         builder.setItems(options, (dialog, which) -> {
             if (which == 0) {
                 // By Collection only
-                if (!NetworkUtils.isNetworkAvailable(this)) {
-                    Toast.makeText(this, "No internet connection. Cannot fetch collections.",
-                            Toast.LENGTH_LONG).show();
-                    return;
-                }
-                Intent intent = new Intent(this, CollectionTreeActivity.class);
-                startActivityForResult(intent, REQUEST_CODE_SELECT_COLLECTION);
+                openCollectionPicker();
             } else if (which == 1) {
                 // By Tags only
                 showTagInputDialog(false);
@@ -245,16 +309,17 @@ public class MainActivity extends AppCompatActivity {
         List<TabStateManager.TabInfo> tabs = tabStateManager.getOpenTabs();
         tabAdapter.updateTabs(tabs);
 
-        attachTabLayoutMediator(tabs.size());
+        attachTabLayoutMediator();
+        updateEmptyTabsState(tabs.isEmpty());
 
         // Make sure we're on a valid tab
         int currentTab = viewPager.getCurrentItem();
-        if (currentTab >= tabs.size()) {
+        if (!tabs.isEmpty() && currentTab >= tabs.size()) {
             viewPager.setCurrentItem(tabs.size() - 1, true);
         }
     }
 
-    private void attachTabLayoutMediator(int tabCount) {
+    private void attachTabLayoutMediator() {
         if (tabLayoutMediator != null) {
             tabLayoutMediator.detach();
         }
@@ -265,13 +330,12 @@ public class MainActivity extends AppCompatActivity {
                     if (tabInfo != null) {
                         tab.setText(tabInfo.getDisplayName());
 
-                        // Allow closing tabs via long-press (except if it's the only tab)
-                        if (tabCount > 1) {
-                            tab.view.setOnLongClickListener(v -> {
-                                showCloseTabDialog(position);
-                                return true;
-                            });
-                        }
+                        // Allow closing tabs via long-press. Closing the last tab brings
+                        // back the "choose a collection" prompt.
+                        tab.view.setOnLongClickListener(v -> {
+                            showCloseTabDialog(position);
+                            return true;
+                        });
                     }
                 }
         );
@@ -443,6 +507,7 @@ public class MainActivity extends AppCompatActivity {
             // Add new tab with the selected collection
             tabStateManager.addTab(collectionKey, collectionName);
             refreshTabs();
+            skipNextResumeRefresh = true;
 
             // Switch to the new tab
             List<TabStateManager.TabInfo> tabs = tabStateManager.getOpenTabs();
@@ -462,6 +527,7 @@ public class MainActivity extends AppCompatActivity {
             if (pendingTags != null) {
                 tabStateManager.addTab(collectionKey, collectionName, pendingTags);
                 refreshTabs();
+                skipNextResumeRefresh = true;
 
                 // Switch to the new tab
                 List<TabStateManager.TabInfo> tabs = tabStateManager.getOpenTabs();
@@ -479,9 +545,22 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
+        // No tabs yet (first launch): go straight to choosing a collection
+        maybeAutoOpenCollectionPicker();
+
+        int cacheClearGeneration = CacheManager.getClearGeneration();
+        boolean cacheWasCleared = cacheClearGeneration != knownCacheClearGeneration;
+        knownCacheClearGeneration = cacheClearGeneration;
+
         // Skip refresh on first resume (fragments will load automatically)
         if (isFirstResume) {
             isFirstResume = false;
+            return;
+        }
+
+        // A tab was just added and is already loading itself
+        if (skipNextResumeRefresh) {
+            skipNextResumeRefresh = false;
             return;
         }
 
@@ -498,8 +577,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Refresh current tab to pick up any changes from settings
-        refreshCurrentTab();
+        if (cacheWasCleared) {
+            // Cached files were deleted in Settings: rebuild every tab so none of them
+            // keeps showing covers that no longer exist on disk
+            setupTabs();
+        } else {
+            // Refresh current tab to pick up any changes from settings
+            refreshCurrentTab();
+        }
     }
 
     private void showSortDialog() {

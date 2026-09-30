@@ -30,23 +30,29 @@ public interface CoverCallback {
  * @param callback Callback to handle success/error
  */
 public static void extractCover(String filePath, CoverCallback callback) {
-    executor.execute(() -> {
-        try {
-            File file = new File(filePath);
-            String fileName = file.getName().toLowerCase();
-            
-            if (fileName.endsWith(".epub")) {
-                extractEpubCover(filePath, callback);
-            } else if (fileName.endsWith(".pdf")) {
-                extractPdfCover(filePath, callback);
-            } else {
-                callback.onError("Unsupported file type: " + fileName);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error extracting cover", e);
-            callback.onError("Failed to extract cover: " + e.getMessage());
+    executor.execute(() -> extractCoverSync(filePath, callback));
+}
+
+/**
+ * Same as {@link #extractCover}, but runs on the calling thread; the callback is
+ * invoked before this method returns.
+ */
+public static void extractCoverSync(String filePath, CoverCallback callback) {
+    try {
+        File file = new File(filePath);
+        String fileName = file.getName().toLowerCase();
+
+        if (fileName.endsWith(".epub")) {
+            extractEpubCover(filePath, callback);
+        } else if (fileName.endsWith(".pdf")) {
+            extractPdfCover(filePath, callback);
+        } else {
+            callback.onError("Unsupported file type: " + fileName);
         }
-    });
+    } catch (Exception e) {
+        Log.e(TAG, "Error extracting cover", e);
+        callback.onError("Failed to extract cover: " + e.getMessage());
+    }
 }
 
 private static void extractEpubCover(String epubFilePath, CoverCallback callback) {

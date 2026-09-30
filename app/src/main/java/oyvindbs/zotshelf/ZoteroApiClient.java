@@ -10,8 +10,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,7 +46,7 @@ public class ZoteroApiClient {
         this.context = context;
         this.executor = Executors.newCachedThreadPool();
 
-        this.cacheDir = new File(context.getFilesDir(), "epubs");
+        this.cacheDir = CacheManager.getEbookCacheDir(context);
         if (!cacheDir.exists()) {
             cacheDir.mkdirs();
         }
@@ -128,9 +131,36 @@ public class ZoteroApiClient {
         void onError(String errorMessage);
     }
 
-    public interface FileCallback {
-        void onFileDownloaded(ZoteroItem item, String filePath);
-        void onError(ZoteroItem item, String errorMessage);
+    /**
+     * Result of {@link #fetchCover}. Callbacks may run on any thread, including the
+     * calling thread when the cover is already on disk.
+     */
+    public interface CoverFetchCallback {
+        /** @param coverPath the cover image, or null if the file has no usable cover */
+        void onCoverReady(ZoteroItem item, String coverPath);
+
+        void onDownloadFailed(ZoteroItem item, String errorMessage);
+    }
+
+    // Books are downloaded a few at a time, so a large collection doesn't start hundreds
+    // of downloads at once (and briefly fill the device with books).
+    private static final int MAX_CONCURRENT_DOWNLOADS = 4;
+    private static final ExecutorService downloadExecutor =
+            Executors.newFixedThreadPool(MAX_CONCURRENT_DOWNLOADS);
+
+    // Covers being fetched right now, by item key, with everyone waiting for them.
+    // Shared by all clients so the same book is never downloaded twice at the same time.
+    // Guarded by itself.
+    private static final Map<String, List<PendingCover>> coversInFlight = new HashMap<>();
+
+    private static final class PendingCover {
+        final ZoteroItem item;
+        final CoverFetchCallback callback;
+
+        PendingCover(ZoteroItem item, CoverFetchCallback callback) {
+            this.item = item;
+            this.callback = callback;
+        }
     }
 
     public void getCollections(String userId, String apiKey, ZoteroCallback<List<ZoteroCollection>> callback) {
@@ -243,55 +273,173 @@ public class ZoteroApiClient {
         return filteredItems;
     }
 
-    public void downloadEbook(ZoteroItem item, FileCallback callback) {
-        executor.execute(() -> {
-            String fileExtension;
-            String mimeType = item.getMimeType();
-            if ("application/epub+zip".equals(mimeType)) {
-                fileExtension = ".epub";
-            } else if ("application/pdf".equals(mimeType)) {
-                fileExtension = ".pdf";
-            } else {
-                callback.onError(item, "Unsupported file type: " + mimeType);
+    /**
+     * Gets the cover image for an EPUB/PDF attachment. The book is only downloaded if the
+     * cover hasn't been extracted before, and it is deleted again as soon as the cover
+     * has been taken out of it, so only the small cover images stay on the device.
+     */
+    public void fetchCover(ZoteroItem item, CoverFetchCallback callback) {
+        final String key = item.getKey();
+        final String fileExtension = getFileExtension(item.getMimeType());
+        if (key == null || fileExtension == null) {
+            callback.onDownloadFailed(item, "Unsupported file type: " + item.getMimeType());
+            return;
+        }
+
+        File coverFile = CacheManager.getCoverFile(context, key);
+        File noCoverMarker = CacheManager.getNoCoverMarker(context, key);
+
+        synchronized (coversInFlight) {
+            List<PendingCover> waiting = coversInFlight.get(key);
+            if (waiting != null) {
+                // Already being fetched (e.g. for another tab): share that result
+                waiting.add(new PendingCover(item, callback));
                 return;
             }
 
-            String fileName = item.getKey() + fileExtension;
-            File ebookFile = new File(cacheDir, fileName);
-
-            if (ebookFile.exists()) {
-                callback.onFileDownloaded(item, ebookFile.getAbsolutePath());
+            if (!coverFile.exists() && !noCoverMarker.exists()) {
+                waiting = new ArrayList<>();
+                waiting.add(new PendingCover(item, callback));
+                coversInFlight.put(key, waiting);
+                downloadExecutor.execute(() -> downloadAndExtractCover(item, fileExtension));
                 return;
             }
+        }
 
-            if (item.getLinks() == null || item.getLinks().getEnclosure() == null) {
-                callback.onError(item, "No download link available");
-                return;
-            }
+        // Done before: no need to download the book again
+        callback.onCoverReady(item, coverFile.exists() ? coverFile.getAbsolutePath() : null);
+    }
 
-            String downloadUrl = item.getLinks().getEnclosure().getHref();
-            String apiKey = new UserPreferences(context).getZoteroApiKey();
+    /** True while the book with this key is being downloaded and its cover extracted. */
+    public static boolean isCoverInFlight(String key) {
+        synchronized (coversInFlight) {
+            return coversInFlight.containsKey(key);
+        }
+    }
 
-            Call<ResponseBody> call = zoteroService.downloadFile(downloadUrl, apiKey);
+    private static String getFileExtension(String mimeType) {
+        if ("application/epub+zip".equals(mimeType)) {
+            return ".epub";
+        } else if ("application/pdf".equals(mimeType)) {
+            return ".pdf";
+        }
+        return null;
+    }
 
-            try {
-                Response<ResponseBody> response = call.execute();
-                if (response.isSuccessful() && response.body() != null) {
-                    boolean success = writeResponseBodyToDisk(response.body(), ebookFile);
+    /** Runs on the download executor. */
+    private void downloadAndExtractCover(ZoteroItem item, String fileExtension) {
+        final String key = item.getKey();
+        final File ebookFile = new File(cacheDir, key + fileExtension);
+        String coverPath = null;
+        String downloadError = null;
 
-                    if (success) {
-                        callback.onFileDownloaded(item, ebookFile.getAbsolutePath());
-                    } else {
-                        callback.onError(item, "Failed to save file");
+        try {
+            downloadError = downloadEbookSync(item, ebookFile);
+
+            if (downloadError == null) {
+                final String[] extractedCover = {null};
+                final boolean[] hasNoCover = {false};
+
+                CoverExtractor.extractCoverSync(ebookFile.getAbsolutePath(),
+                        new CoverExtractor.CoverCallback() {
+                    @Override
+                    public void onCoverExtracted(String path) {
+                        extractedCover[0] = path;
                     }
-                } else {
-                    callback.onError(item, "Failed to download file: " + response.code());
+
+                    @Override
+                    public void onError(String errorMessage) {
+                        Log.w(TAG, "No cover for " + key + ": " + errorMessage);
+                        // Only remember that there is no cover if the book was really there.
+                        // If it vanished (e.g. the cache was cleared meanwhile), retry next time.
+                        hasNoCover[0] = ebookFile.exists();
+                    }
+                });
+
+                coverPath = extractedCover[0];
+                if (hasNoCover[0]) {
+                    markNoCover(key);
                 }
-            } catch (IOException e) {
-                Log.e(TAG, "Download error", e);
-                callback.onError(item, "Network error: " + e.getMessage());
             }
-        });
+        } catch (Throwable t) {
+            Log.e(TAG, "Error fetching cover for " + key, t);
+        } finally {
+            // The book is only needed to get the cover out of it; don't keep it
+            if (ebookFile.exists() && !ebookFile.delete()) {
+                Log.w(TAG, "Could not delete " + ebookFile.getAbsolutePath());
+            }
+            finishCoverFetch(key, coverPath, downloadError);
+        }
+    }
+
+    /** Remembers that a book has no usable cover, so it isn't downloaded again on every refresh. */
+    private void markNoCover(String key) {
+        File marker = CacheManager.getNoCoverMarker(context, key);
+        try {
+            File dir = marker.getParentFile();
+            if (dir != null && !dir.exists()) {
+                dir.mkdirs();
+            }
+            marker.createNewFile();
+        } catch (IOException e) {
+            Log.w(TAG, "Could not write no-cover marker for " + key, e);
+        }
+    }
+
+    private static void finishCoverFetch(String key, String coverPath, String downloadError) {
+        List<PendingCover> waiting;
+        synchronized (coversInFlight) {
+            waiting = coversInFlight.remove(key);
+        }
+        if (waiting == null) {
+            return;
+        }
+
+        for (PendingCover pending : waiting) {
+            try {
+                if (downloadError != null) {
+                    pending.callback.onDownloadFailed(pending.item, downloadError);
+                } else {
+                    pending.callback.onCoverReady(pending.item, coverPath);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error in cover callback for " + key, e);
+            }
+        }
+    }
+
+    /** Downloads the book to ebookFile. Returns null on success, otherwise an error message. */
+    private String downloadEbookSync(ZoteroItem item, File ebookFile) {
+        // The cache may have been emptied from Settings while this client was alive
+        if (!cacheDir.exists()) {
+            cacheDir.mkdirs();
+        }
+
+        // Only one download per book runs at a time, so an existing file is left over
+        // from an interrupted run and may be incomplete: start over
+        if (ebookFile.exists()) {
+            ebookFile.delete();
+        }
+
+        if (item.getLinks() == null || item.getLinks().getEnclosure() == null) {
+            return "No download link available";
+        }
+
+        String downloadUrl = item.getLinks().getEnclosure().getHref();
+        String apiKey = new UserPreferences(context).getZoteroApiKey();
+
+        Call<ResponseBody> call = zoteroService.downloadFile(downloadUrl, apiKey);
+
+        try {
+            Response<ResponseBody> response = call.execute();
+            if (response.isSuccessful() && response.body() != null) {
+                return writeResponseBodyToDisk(response.body(), ebookFile) ? null : "Failed to save file";
+            }
+            return "Failed to download file: " + response.code();
+        } catch (IOException e) {
+            Log.e(TAG, "Download error", e);
+            return "Network error: " + e.getMessage();
+        }
     }
 
     private boolean writeResponseBodyToDisk(ResponseBody body, File outputFile) {

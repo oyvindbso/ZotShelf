@@ -62,45 +62,27 @@ public void onDataSetChanged() {
         public void onSuccess(List<ZoteroItem> zoteroItems) {
             for (ZoteroItem item : zoteroItems) {
                 final CountDownLatch itemLatch = new CountDownLatch(1);
-                
-                zoteroApiClient.downloadEbook(item, new ZoteroApiClient.FileCallback() {
-                    @Override
-                    public void onFileDownloaded(ZoteroItem item, String filePath) {
-                        // Extract cover using the new universal extractor
-                        CoverExtractor.extractCover(filePath, new CoverExtractor.CoverCallback() {
-                            @Override
-                            public void onCoverExtracted(String coverPath) {
-                                EpubCoverItem coverItem = new EpubCoverItem(
-                                        item.getKey(),
-                                        item.getTitle(),
-                                        coverPath,
-                                        item.getAuthors(),
-                                        userPreferences.getZoteroUsername()
-                                );
-                                
-                                coverItems.add(coverItem);
-                                itemLatch.countDown();
-                            }
 
-                            @Override
-                            public void onError(String errorMessage) {
-                                // If cover extraction fails, still add the item but with a placeholder
-                                EpubCoverItem coverItem = new EpubCoverItem(
-                                        item.getKey(),
-                                        item.getTitle(),
-                                        null, // null cover path will show placeholder
-                                        item.getAuthors(),
-                                        userPreferences.getZoteroUsername()
-                                );
-                                
-                                coverItems.add(coverItem);
-                                itemLatch.countDown();
-                            }
-                        });
+                // Reuses an already extracted cover; otherwise downloads the book,
+                // extracts the cover and deletes the book again
+                zoteroApiClient.fetchCover(item, new ZoteroApiClient.CoverFetchCallback() {
+                    @Override
+                    public void onCoverReady(ZoteroItem item, String coverPath) {
+                        // A null cover path shows the placeholder
+                        EpubCoverItem coverItem = new EpubCoverItem(
+                                item.getKey(),
+                                item.getTitle(),
+                                coverPath,
+                                item.getAuthors(),
+                                userPreferences.getZoteroUsername()
+                        );
+
+                        coverItems.add(coverItem);
+                        itemLatch.countDown();
                     }
 
                     @Override
-                    public void onError(ZoteroItem item, String errorMessage) {
+                    public void onDownloadFailed(ZoteroItem item, String errorMessage) {
                         // If download fails, still add the item but with placeholder
                         EpubCoverItem coverItem = new EpubCoverItem(
                                 item.getKey(),
@@ -109,7 +91,7 @@ public void onDataSetChanged() {
                                 item.getAuthors(),
                                 userPreferences.getZoteroUsername()
                         );
-                        
+
                         coverItems.add(coverItem);
                         itemLatch.countDown();
                     }

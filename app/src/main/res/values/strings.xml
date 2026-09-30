@@ -19,7 +19,23 @@
     <string name="title_select_collection">Select Collection</string>
     <string name="no_collections_found">No collections found</string>
     <string name="error_loading_collections">Error loading collections</string>
-    
+    <string name="choose_collection_title">Choose a collection</string>
+    <string name="choose_collection_message">ZotShelf only downloads books from the collections you open, so a large library won\'t fill up your phone. You can add more tabs later with the + button.</string>
+    <string name="choose_collection_button">Choose a collection</string>
+    <string name="no_internet_collections">No internet connection. Cannot fetch collections.</string>
+
+    <!-- Storage / cache -->
+    <string name="storage_settings">Storage</string>
+    <string name="cache_size_calculating">Cached files: calculating…</string>
+    <string name="cache_size_format">Cached files: %1$s</string>
+    <string name="cache_explanation">Cover images are kept on this device so your shelves load quickly. Books are only downloaded briefly to get their covers and are deleted right after. Deleting the cache frees up space; covers are fetched again the next time you open a tab. Your Zotero library is not affected.</string>
+    <string name="delete_cached_files">Delete cached files</string>
+    <string name="delete_cached_files_confirm_title">Delete cached files?</string>
+    <string name="delete_cached_files_confirm_message">This deletes %1$s of cached cover images from this device. Nothing is deleted from Zotero.</string>
+    <string name="delete">Delete</string>
+    <string name="deleting_cached_files">Deleting cached files…</string>
+    <string name="cached_files_deleted">Cached files deleted (%1$s freed)</string>
+
     <!-- Widget strings -->
     <string name="widget_item_image_desc">Book cover image</string>
     <string name="widget_empty">No ebook covers available</string>

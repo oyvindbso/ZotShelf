@@ -11,15 +11,20 @@ import oyvindbs.zotshelf.ZoteroItem;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.Executor;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class EpubCoverRepository {
 
     private static final String TAG = "EpubCoverRepository";
+    // One thread for all cover-cache database work, shared by every tab, so that saves and
+    // membership updates from different tabs never overwrite each other's collection labels.
+    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
+
     private final AppDatabase database;
-    private final Executor executor;
     private final Handler mainHandler;
     private final UserPreferences userPreferences;
 
@@ -34,16 +39,33 @@ public class EpubCoverRepository {
 
     public EpubCoverRepository(Context context) {
         database = AppDatabase.getInstance(context);
-        executor = Executors.newSingleThreadExecutor();
         mainHandler = new Handler(Looper.getMainLooper());
         userPreferences = new UserPreferences(context);
     }
 
-    public void saveCoverFromZoteroItem(ZoteroItem item, String coverPath) {
+    /**
+     * Saves an item to the cover cache.
+     *
+     * @param collectionKey the collection the item was loaded for, or null/empty if it wasn't
+     *                      loaded through a collection. It is added to the collections the item
+     *                      is already known to be in (an item can be in several collections).
+     */
+    public void saveCoverFromZoteroItem(ZoteroItem item, String coverPath, String collectionKey) {
+        if (item.getKey() == null) {
+            return;
+        }
+
         executor.execute(() -> {
             try {
-                EpubCoverEntity entity = createEntityFromZoteroItem(item, coverPath);
-                database.epubCoverDao().insert(entity);
+                database.runInTransaction(() -> {
+                    EpubCoverDao dao = database.epubCoverDao();
+                    EpubCoverEntity existing = dao.getById(item.getKey());
+
+                    EpubCoverEntity entity = createEntityFromZoteroItem(item, coverPath);
+                    entity.setCollectionKeys(addCollectionKey(
+                            existing != null ? existing.getCollectionKeys() : null, collectionKey));
+                    dao.insert(entity);
+                });
                 Log.d(TAG, "Saved cover for item: " + item.getTitle());
             } catch (Exception e) {
                 Log.e(TAG, "Error saving cover for item: " + item.getTitle(), e);
@@ -51,14 +73,52 @@ public class EpubCoverRepository {
         });
     }
 
-    public void saveCoverFromZoteroItemSync(ZoteroItem item, String coverPath) {
-        try {
-            EpubCoverEntity entity = createEntityFromZoteroItem(item, coverPath);
-            database.epubCoverDao().insert(entity);
-            Log.d(TAG, "Saved cover for item: " + item.getTitle());
-        } catch (Exception e) {
-            Log.e(TAG, "Error saving cover for item: " + item.getTitle(), e);
+    /**
+     * Call after fetching the complete contents of a collection. Cached items that are
+     * still labelled with the collection but were not in the fetched list (removed from the
+     * collection in Zotero) lose the label, so the tab stops showing them from the cache.
+     */
+    public void syncCollectionMembership(String collectionKey, Set<String> itemIdsInCollection) {
+        if (collectionKey == null || collectionKey.isEmpty()) {
+            return;
         }
+        final Set<String> ids = new HashSet<>(itemIdsInCollection);
+
+        executor.execute(() -> {
+            try {
+                database.runInTransaction(() -> {
+                    EpubCoverDao dao = database.epubCoverDao();
+                    for (EpubCoverEntity entity : dao.getCoversLabelledWithCollection(collectionKey)) {
+                        if (!ids.contains(entity.getId())) {
+                            entity.setCollectionKeys(
+                                    removeCollectionKey(entity.getCollectionKeys(), collectionKey));
+                            dao.insert(entity);
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error updating cached items for collection " + collectionKey, e);
+            }
+        });
+    }
+
+    // Collection keys are stored as ",KEY1,KEY2," so a LIKE '%,KEY,%' query only matches
+    // exact keys. Values in the old format (a single key without commas) are dropped: they
+    // held whichever collection had been picked last, not the item's real collection.
+    static String addCollectionKey(String storedKeys, String collectionKey) {
+        String keys = (storedKeys != null && storedKeys.startsWith(",")) ? storedKeys : ",";
+        if (collectionKey == null || collectionKey.isEmpty()
+                || keys.contains("," + collectionKey + ",")) {
+            return keys;
+        }
+        return keys + collectionKey + ",";
+    }
+
+    static String removeCollectionKey(String storedKeys, String collectionKey) {
+        if (storedKeys == null || !storedKeys.startsWith(",")) {
+            return ",";
+        }
+        return storedKeys.replace("," + collectionKey + ",", ",");
     }
 
     private EpubCoverEntity createEntityFromZoteroItem(ZoteroItem item, String coverPath) {
@@ -74,14 +134,7 @@ public class EpubCoverRepository {
         entity.setMimeType(item.getMimeType());
         entity.setParentItemType(item.getParentItemType());
         entity.setBook(item.isBook());
-        
-        String currentCollection = userPreferences.getSelectedCollectionKey();
-        if (currentCollection != null && !currentCollection.isEmpty()) {
-            entity.setCollectionKeys(currentCollection);
-        } else {
-            entity.setCollectionKeys("");
-        }
-        
+
         if (item.getLinks() != null && item.getLinks().getEnclosure() != null) {
             entity.setDownloadUrl(item.getLinks().getEnclosure().getHref());
         }
