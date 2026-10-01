@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.app.AlertDialog;
 
@@ -484,6 +485,17 @@ public class MainActivity extends AppCompatActivity {
 
         android.view.LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_info, null);
+
+        // Version and build number come from app/build.gradle at build time,
+        // so they update automatically with every build.
+        String versionText = getString(R.string.version_format,
+                BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE);
+        if (!BuildConfig.CI_BUILD_LABEL.isEmpty()) {
+            versionText += " \u00B7 " + BuildConfig.CI_BUILD_LABEL;
+        }
+        TextView versionView = dialogView.findViewById(R.id.text_version);
+        versionView.setText(versionText);
+
         builder.setView(dialogView);
 
         builder.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
