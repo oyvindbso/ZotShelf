@@ -14,6 +14,7 @@
     <string name="who">This app was developed by Øyvind Solheim (@Oyvindbs@nerdculture.de) with a lot of help from the Claude AI. See the code or propose changes on https://www.github.com/oyvindbso/zotshelf</string>
     <string name="coffee">Enjoy ZotShelf? Buy me a coffee: https://buymeacoffee.com/oyvindbs or propose new features/code on gihub (above).</string>
     <string name="app_description">ZotShelf displays your EPUB and PDF book covers from your Zotero library in a convenient shelf.</string>
+    <string name="version_format">Version %1$s (build %2$d)</string>
 
     <!--Collections-->
     <string name="title_select_collection">Select Collection</string>

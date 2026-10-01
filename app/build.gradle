@@ -14,6 +14,16 @@ def oauthSecret = { String name, String placeholder ->
     System.getenv(name) ?: localProperties.getProperty(name) ?: placeholder
 }
 
+// CI build number shown on the About screen, so every Bitrise / GitHub Actions
+// build can be told apart without editing anything. Empty for local builds.
+def ciBuildLabel = {
+    def bitrise = System.getenv('BITRISE_BUILD_NUMBER')
+    if (bitrise) return "Bitrise #${bitrise}"
+    def github = System.getenv('GITHUB_RUN_NUMBER')
+    if (github) return "GitHub #${github}"
+    return ''
+}()
+
 android {
     namespace 'oyvindbs.zotshelf'
 
@@ -28,6 +38,7 @@ android {
 
         buildConfigField "String", "ZOTERO_OAUTH_CLIENT_KEY", "\"${oauthSecret('ZOTERO_OAUTH_CLIENT_KEY', 'YOUR_CLIENT_KEY_HERE')}\""
         buildConfigField "String", "ZOTERO_OAUTH_CLIENT_SECRET", "\"${oauthSecret('ZOTERO_OAUTH_CLIENT_SECRET', 'YOUR_CLIENT_SECRET_HERE')}\""
+        buildConfigField "String", "CI_BUILD_LABEL", "\"${ciBuildLabel}\""
     }
 
     testOptions {
