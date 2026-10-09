@@ -33,8 +33,8 @@ android {
         applicationId "oyvindbs.zotshelf"
         minSdk 23
         targetSdk 36
-        versionCode 168
-        versionName "1.68public"
+        versionCode 170
+        versionName "1.70vercode2"
 
         buildConfigField "String", "ZOTERO_OAUTH_CLIENT_KEY", "\"${oauthSecret('ZOTERO_OAUTH_CLIENT_KEY', 'YOUR_CLIENT_KEY_HERE')}\""
         buildConfigField "String", "ZOTERO_OAUTH_CLIENT_SECRET", "\"${oauthSecret('ZOTERO_OAUTH_CLIENT_SECRET', 'YOUR_CLIENT_SECRET_HERE')}\""
