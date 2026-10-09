@@ -31,7 +31,7 @@ android {
 
     defaultConfig {
         applicationId "oyvindbs.zotshelf"
-        minSdk 23
+        minSdk 24
         targetSdk 36
         versionCode 170
         versionName "1.70vercode2"
