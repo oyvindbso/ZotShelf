@@ -5,90 +5,120 @@ import java.util.Comparator;
 import java.util.List;
 
 public class CoverSorter {
-    
+
     /**
-     * Sort a list of EpubCoverItems based on the specified sort mode
-     * @param items The list of items to sort (sorted in place)
-     * @param sortMode The sort mode (UserPreferences.SORT_BY_TITLE or SORT_BY_AUTHOR)
+     * Sort a list of EpubCoverItems in place.
+     *
+     * @param items      The list of items to sort
+     * @param sortMode   UserPreferences.SORT_BY_TITLE, SORT_BY_AUTHOR or SORT_BY_YEAR
+     * @param descending false = A to Z / oldest first, true = Z to A / newest first.
+     *                   Items missing the value sorted on (no title, author or year)
+     *                   are placed last in both directions.
      */
-    public static void sortCovers(List<EpubCoverItem> items, int sortMode) {
+    public static void sortCovers(List<EpubCoverItem> items, int sortMode, boolean descending) {
         if (items == null || items.isEmpty()) {
             return;
         }
-        
+
         Comparator<EpubCoverItem> comparator;
-        
         if (sortMode == UserPreferences.SORT_BY_AUTHOR) {
-            comparator = new AuthorComparator();
+            comparator = (a, b) -> compareByAuthor(a, b, descending);
+        } else if (sortMode == UserPreferences.SORT_BY_YEAR) {
+            comparator = (a, b) -> compareByYear(a, b, descending);
         } else {
-            // Default to title sorting
-            comparator = new TitleComparator();
+            comparator = (a, b) -> compareByTitle(a, b, descending);
         }
-        
+
         Collections.sort(items, comparator);
     }
-    
-    /**
-     * Comparator for sorting by title (case-insensitive)
-     */
-    private static class TitleComparator implements Comparator<EpubCoverItem> {
-        @Override
-        public int compare(EpubCoverItem item1, EpubCoverItem item2) {
-            String title1 = item1.getTitle();
-            String title2 = item2.getTitle();
-            
-            // Handle null titles
-            if (title1 == null && title2 == null) return 0;
-            if (title1 == null) return 1;  // null titles go to end
-            if (title2 == null) return -1;
-            
-            // Remove common articles for better sorting
-            title1 = removeArticles(title1);
-            title2 = removeArticles(title2);
-            
-            return title1.compareToIgnoreCase(title2);
+
+    private static int compareByTitle(EpubCoverItem item1, EpubCoverItem item2, boolean descending) {
+        String title1 = sortableTitle(item1);
+        String title2 = sortableTitle(item2);
+
+        int missing = compareMissing(title1 == null, title2 == null);
+        if (missing != 0 || title1 == null) {
+            return missing;
+        }
+
+        int result = title1.compareToIgnoreCase(title2);
+        return descending ? -result : result;
+    }
+
+    private static int compareByAuthor(EpubCoverItem item1, EpubCoverItem item2, boolean descending) {
+        String lastName1 = sortableAuthor(item1);
+        String lastName2 = sortableAuthor(item2);
+
+        int missing = compareMissing(lastName1 == null, lastName2 == null);
+        if (missing != 0) {
+            return missing;
+        }
+
+        int result = lastName1 == null ? 0 : lastName1.compareToIgnoreCase(lastName2);
+        if (result == 0) {
+            // Same author: order by title
+            return compareByTitle(item1, item2, descending);
+        }
+        return descending ? -result : result;
+    }
+
+    private static int compareByYear(EpubCoverItem item1, EpubCoverItem item2, boolean descending) {
+        int year1 = parseYear(item1.getYear());
+        int year2 = parseYear(item2.getYear());
+
+        int missing = compareMissing(year1 == NO_YEAR, year2 == NO_YEAR);
+        if (missing != 0) {
+            return missing;
+        }
+
+        int result = Integer.compare(year1, year2);
+        if (result == 0) {
+            // Same year: always order by title A to Z
+            return compareByTitle(item1, item2, false);
+        }
+        return descending ? -result : result;
+    }
+
+    /** Orders items that lack the value after items that have it, whatever the direction. */
+    private static int compareMissing(boolean missing1, boolean missing2) {
+        if (missing1 == missing2) return 0;
+        return missing1 ? 1 : -1;
+    }
+
+    private static final int NO_YEAR = Integer.MIN_VALUE;
+
+    private static int parseYear(String year) {
+        if (year == null) {
+            return NO_YEAR;
+        }
+        try {
+            return Integer.parseInt(year.trim());
+        } catch (NumberFormatException e) {
+            return NO_YEAR;
         }
     }
-    
-    /**
-     * Comparator for sorting by author last name (case-insensitive)
-     */
-    private static class AuthorComparator implements Comparator<EpubCoverItem> {
-        @Override
-        public int compare(EpubCoverItem item1, EpubCoverItem item2) {
-            String authors1 = item1.getAuthors();
-            String authors2 = item2.getAuthors();
-            
-            // Handle null authors
-            if (authors1 == null && authors2 == null) return 0;
-            if (authors1 == null) return 1;  // null authors go to end
-            if (authors2 == null) return -1;
-            
-            // Extract first author's last name for sorting
-            String lastName1 = extractFirstAuthorLastName(authors1);
-            String lastName2 = extractFirstAuthorLastName(authors2);
-            
-            int result = lastName1.compareToIgnoreCase(lastName2);
-            
-            // If last names are the same, sort by title as secondary criteria
-            if (result == 0) {
-                String title1 = item1.getTitle();
-                String title2 = item2.getTitle();
-                
-                if (title1 == null && title2 == null) return 0;
-                if (title1 == null) return 1;
-                if (title2 == null) return -1;
-                
-                title1 = removeArticles(title1);
-                title2 = removeArticles(title2);
-                
-                result = title1.compareToIgnoreCase(title2);
-            }
-            
-            return result;
+
+    /** Title without a leading article, or null if the item has no title. */
+    private static String sortableTitle(EpubCoverItem item) {
+        String title = item.getTitle();
+        if (title == null || title.trim().isEmpty()) {
+            return null;
         }
+        return removeArticles(title);
     }
-    
+
+    /** Last name of the first author, or null if the item has no known author. */
+    private static String sortableAuthor(EpubCoverItem item) {
+        String authors = item.getAuthors();
+        if (authors == null) {
+            return null;
+        }
+        String lastName = extractFirstAuthorLastName(authors);
+        return UNKNOWN_AUTHOR.equals(lastName) ? null : lastName;
+    }
+
+    private static final String UNKNOWN_AUTHOR = "zzz";
+
     /**
      * Extract the last name of the first author from the authors string
      * Handles formats like "Smith, John" or "Smith, John; Doe, Jane"

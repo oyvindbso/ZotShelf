@@ -54,6 +54,12 @@
     <string name="sort_mode_title">Sort Mode</string>
     <string name="sort_by_title">Sort by Title</string>
     <string name="sort_by_author">Sort by Author</string>
+    <string name="sort_title_az">Title (A–Z)</string>
+    <string name="sort_title_za">Title (Z–A)</string>
+    <string name="sort_author_az">Author (A–Z)</string>
+    <string name="sort_author_za">Author (Z–A)</string>
+    <string name="sort_year_oldest">Year (oldest first)</string>
+    <string name="sort_year_newest">Year (newest first)</string>
     <string name="change_sort_mode">Change Sort Mode</string>
     
     <!-- File type settings -->

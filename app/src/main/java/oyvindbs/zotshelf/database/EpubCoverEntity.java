@@ -28,6 +28,7 @@ import androidx.room.PrimaryKey;
   private String parentItemType; // Type of parent item (book, article, etc.)
   private boolean isBook; // Cached result of isBook() check
   private String collectionKeys; // Collections this item is in, stored as ",KEY1,KEY2,"
+  private String year; // Publication year (4 digits), null if unknown
   
   public EpubCoverEntity(@NonNull String id, String title, String authors,
   String coverPath, String zoteroUsername) {
@@ -136,5 +137,13 @@ import androidx.room.PrimaryKey;
   
   public void setCollectionKeys(String collectionKeys) {
   this.collectionKeys = collectionKeys;
+  }
+
+  public String getYear() {
+  return year;
+  }
+
+  public void setYear(String year) {
+  this.year = year;
   }
   }
