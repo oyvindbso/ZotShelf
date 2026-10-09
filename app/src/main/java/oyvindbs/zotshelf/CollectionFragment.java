@@ -378,7 +378,8 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
                             title,
                             coverPath,
                             item.getAuthors(),
-                            userPreferences.getZoteroUsername()
+                            userPreferences.getZoteroUsername(),
+                            item.getYear()
                     );
 
                     // Queued before the membership update below, which runs on the same thread
@@ -422,9 +423,9 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
             coverItems.clear();
             coverItems.addAll(newItems);
 
-            // Apply current sort mode
-            int sortMode = userPreferences.getSortMode();
-            CoverSorter.sortCovers(coverItems, sortMode);
+            // Apply current sort mode and direction
+            CoverSorter.sortCovers(coverItems, userPreferences.getSortMode(),
+                    userPreferences.getSortDescending());
 
             int displayMode = userPreferences.getDisplayMode();
             if (adapter != null && displayMode == adapterDisplayMode) {
@@ -491,9 +492,9 @@ public class CollectionFragment extends Fragment implements CoverGridAdapter.Cov
 
         getActivity().runOnUiThread(() -> {
             if (!coverItems.isEmpty()) {
-                // Apply current sort mode
-                int sortMode = userPreferences.getSortMode();
-                CoverSorter.sortCovers(coverItems, sortMode);
+                // Apply current sort mode and direction
+                CoverSorter.sortCovers(coverItems, userPreferences.getSortMode(),
+                        userPreferences.getSortDescending());
 
                 // Refresh the adapter
                 if (adapter != null) {

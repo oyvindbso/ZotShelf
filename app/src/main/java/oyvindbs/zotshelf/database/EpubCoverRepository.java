@@ -134,6 +134,7 @@ public class EpubCoverRepository {
         entity.setMimeType(item.getMimeType());
         entity.setParentItemType(item.getParentItemType());
         entity.setBook(item.isBook());
+        entity.setYear(item.getYear());
 
         if (item.getLinks() != null && item.getLinks().getEnclosure() != null) {
             entity.setDownloadUrl(item.getLinks().getEnclosure().getHref());
@@ -187,7 +188,8 @@ public class EpubCoverRepository {
                     entity.getTitle(),
                     coverPath,
                     entity.getAuthors(),
-                    entity.getZoteroUsername()
+                    entity.getZoteroUsername(),
+                    entity.getYear()
             );
             coverItems.add(item);
         }

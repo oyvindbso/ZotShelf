@@ -16,15 +16,17 @@ public class UserPreferences {
     private static final String KEY_SHOW_PDFS = "show_pdfs";
     private static final String KEY_BOOKS_ONLY = "books_only";
     private static final String KEY_SORT_MODE = "sort_mode";
-    
+    private static final String KEY_SORT_DESCENDING = "sort_descending";
+
     // Display mode constants
     public static final int DISPLAY_TITLE_ONLY = 0;
     public static final int DISPLAY_AUTHOR_ONLY = 1;
     public static final int DISPLAY_AUTHOR_TITLE = 2;
-    
+
     // Sort mode constants
     public static final int SORT_BY_TITLE = 0;
     public static final int SORT_BY_AUTHOR = 1;
+    public static final int SORT_BY_YEAR = 2;
     
     private final SharedPreferences preferences;
     
@@ -121,11 +123,19 @@ public class UserPreferences {
     public int getSortMode() {
         return preferences.getInt(KEY_SORT_MODE, SORT_BY_TITLE); // Default to sort by title
     }
-    
+
     public void setSortMode(int sortMode) {
         preferences.edit().putInt(KEY_SORT_MODE, sortMode).apply();
     }
-    
+
+    public boolean getSortDescending() {
+        return preferences.getBoolean(KEY_SORT_DESCENDING, false); // Default to ascending
+    }
+
+    public void setSortDescending(boolean descending) {
+        preferences.edit().putBoolean(KEY_SORT_DESCENDING, descending).apply();
+    }
+
     public boolean hasAnyFileTypeEnabled() {
         return getShowEpubs() || getShowPdfs();
     }

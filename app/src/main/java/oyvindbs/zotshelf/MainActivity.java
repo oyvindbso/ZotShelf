@@ -603,19 +603,29 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Sort By");
 
-        String[] options = {"Title", "Author"};
-        int currentMode = userPreferences.getSortMode();
+        // Two entries per sort mode: position = sortMode * 2 (+ 1 for the reversed direction)
+        String[] options = {
+                getString(R.string.sort_title_az),
+                getString(R.string.sort_title_za),
+                getString(R.string.sort_author_az),
+                getString(R.string.sort_author_za),
+                getString(R.string.sort_year_oldest),
+                getString(R.string.sort_year_newest)
+        };
+        int current = userPreferences.getSortMode() * 2
+                + (userPreferences.getSortDescending() ? 1 : 0);
+        if (current < 0 || current >= options.length) {
+            current = 0;
+        }
 
-        builder.setSingleChoiceItems(options, currentMode, (dialog, which) -> {
-            userPreferences.setSortMode(which);
+        builder.setSingleChoiceItems(options, current, (dialog, which) -> {
+            userPreferences.setSortMode(which / 2);
+            userPreferences.setSortDescending(which % 2 == 1);
             dialog.dismiss();
 
-            // Apply sorting to current tab
-            applySortingToCurrentTab();
+            applySortingToLoadedTabs();
 
-            Toast.makeText(this,
-                    "Sorted by " + (which == UserPreferences.SORT_BY_TITLE ? "Title" : "Author"),
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Sorted by " + options[which], Toast.LENGTH_SHORT).show();
         });
 
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
@@ -624,11 +634,13 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void applySortingToCurrentTab() {
+    // The sort order is shared by all tabs, so every tab that is already loaded is re-sorted
+    private void applySortingToLoadedTabs() {
         viewPager.post(() -> {
-            CollectionFragment fragment = getCurrentFragment();
-            if (fragment != null && fragment.isAdded()) {
-                fragment.applySorting();
+            for (androidx.fragment.app.Fragment fragment : getSupportFragmentManager().getFragments()) {
+                if (fragment instanceof CollectionFragment && fragment.isAdded()) {
+                    ((CollectionFragment) fragment).applySorting();
+                }
             }
         });
     }
